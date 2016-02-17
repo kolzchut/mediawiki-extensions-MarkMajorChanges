@@ -1,0 +1,18 @@
+{
+	"@metadata": {
+		"authors": [
+			"Dror S."
+		]
+	},
+	"markmajorchanges-desc": "מוסיפה פעולה להגדרת \"שינוי מהותי\" בגרסה של ערך ע\" שימוש בתגית עריכה סטנדרטית",
+	"right-markmajorchange": "הצגת כפתור פעולה לסימון גרסה של ערך כשינוי מהותי",
+	"markmajorchanges-mark-btn": "שינוי מהותי",
+	"tag-majorchange": "שינוי מהותי",
+	"tag-majorchange-description": "עריכות שסומנו ע\" צוות האתר כשינוי מהותי",
+	"tag-arabic": "ערבית",
+	"tag-arabic-description": "עריכות שסומנו ע\"י צוות האתר כרלבנטיות לתרגום לערבית",
+	"markmajorchange": "שינוי מהותי",
+	"markmajorchange-action-title": "שינוי מהותי בדף $1",
+	"markmajorchange-form-desc": "אתם עומדים להגדיר את הגרסה האחרונה כשינוי מהותי.",
+	"markmajorchanges-reason": "מה השתנה?"
+}

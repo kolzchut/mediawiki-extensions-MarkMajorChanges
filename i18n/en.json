@@ -1,0 +1,19 @@
+{
+	"@metadata": {
+		"authors": [
+			"Dror S."
+		]
+	},
+	"markmajorchanges-desc": "Adds a shortcut to adding a \"major change\" revision tag to the latest revision of an article",
+	"right-markmajorchange": "Show a shortcut to mark a revision as a major change",
+	"markmajorchanges-mark-btn": "Major change",
+	"tag-majorchange": "Major change",
+	"tag-majorchange-description": "Edits marked by staff as a major change",
+	"tag-arabic": "Arabic",
+	"tag-arabic-description": "Edits marked by staff as having an influence on the Arabic translation",
+	"markmajorchange": "Major Change",
+	"markmajorchange-action-title": "A major change in $1",
+	"markmajorchange-form-desc": "A Major Change is upon us.",
+	"markmajorchanges-reason": "What changed?",
+	"markmajorchanges-generic-error": "There's an error of some kind. Maybe."
+}
