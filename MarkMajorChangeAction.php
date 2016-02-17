@@ -10,6 +10,21 @@
 class MajorChangeAction extends FormAction {
 	private $reason;
 	private $onlyArabic;
+	private $requiredRight = 'markmajorchange';
+
+	public function getRequiredRight() {
+		return $this->requiredRight;
+	}
+
+	public function show() {
+		// Additional security checking before parent::show()
+		$errors = $this->getTitle()->getUserPermissionsErrors( $this->getRequiredRight(), $this->getUser() );
+		if ( count( $errors ) ) {
+			throw new PermissionsError( $this->getRequiredRight(), $errors );
+		}
+
+		parent::show();
+	}
 
 	public function getName() {
 		return 'markmajorchange';

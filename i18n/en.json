@@ -5,7 +5,8 @@
 		]
 	},
 	"markmajorchanges-desc": "Adds a shortcut to adding a \"major change\" revision tag to the latest revision of an article",
-	"right-markmajorchange": "Show a shortcut to mark a revision as a major change",
+	"right-markmajorchange": "Allow marking a revision as a major change",
+	"action-markmajorchange": "mark this page as a major change",
 	"markmajorchanges-mark-btn": "Major change",
 	"tag-majorchange": "Major change",
 	"tag-majorchange-description": "Edits marked by staff as a major change",

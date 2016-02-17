@@ -5,7 +5,8 @@
 		]
 	},
 	"markmajorchanges-desc": "מוסיפה פעולה להגדרת \"שינוי מהותי\" בגרסה של ערך ע\" שימוש בתגית עריכה סטנדרטית",
-	"right-markmajorchange": "הצגת כפתור פעולה לסימון גרסה של ערך כשינוי מהותי",
+	"right-markmajorchange": "סימון גרסה של ערך כשינוי מהותי",
+	"action-markmajorchange": "לסמן גרסאות כשינוי מהותי",
 	"markmajorchanges-mark-btn": "שינוי מהותי",
 	"tag-majorchange": "שינוי מהותי",
 	"tag-majorchange-description": "עריכות שסומנו ע\" צוות האתר כשינוי מהותי",
