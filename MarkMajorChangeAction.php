@@ -9,7 +9,7 @@
  */
 class MajorChangeAction extends FormAction {
 	private $reason;
-	private $onlyArabic;
+	private $isSecondaryChange;
 	private $requiredRight = 'markmajorchange';
 
 	public function getRequiredRight() {
@@ -51,21 +51,21 @@ class MajorChangeAction extends FormAction {
 		return $this->msg( 'markmajorchange-form-desc' )->text();
 	}
 
-	//@todo use JS plugin jQuery.plugin.byteLimit like mediawiki.action.edit.js
 	protected function getFormFields() {
 		$fields = array(
-			'only-arabic' => array(
+			'isSecondaryChange' => array(
 				'type' => 'check',
-				'label' => 'זה לא שינוי מהותי, אבל רלבנטי לתרגום לערבית',
+				'label-message' => 'markmajorchanges-field-issecondary',
 				//'cssclass' => 'form-control'
 			),
 			'reason' => array(
 				'type' => 'textarea',
-				'label-message' => 'markmajorchanges-reason',
+				'label-message' => 'markmajorchanges-field-reason',
 				'label' => 'What changed?',
 				'maxlength' => '200',
 				'size' => 60,
-				'rows' => 3,
+				'cols' => 60,
+				'rows' => 2,
 				'required' => true,
 				//'cssclass' => 'form-control' // Bootstrap3
 
@@ -78,8 +78,8 @@ class MajorChangeAction extends FormAction {
 	public function onSubmit( $data ) {
 		// The HTMLForm class takes care of basic validation,
 		// such as required fields not being empty...
-		$this->reason = $data['reason'];
-		$this->onlyArabic = $data['only-arabic'];
+		$this->reason            = $data['reason'];
+		$this->isSecondaryChange = $data['isSecondaryChange'];
 
 		return true;
 	}
@@ -123,8 +123,8 @@ class MajorChangeAction extends FormAction {
 		$revId = $this->getTitle()->getLatestRevID();
 		$reason = $this->reason;
 		$user = $this->getUser();
-		// Is this a major change, or only relevant to Arabic? Change tag accordingly
-		$tags = array( $this->onlyArabic ? MarkMajorChanges::getSecondaryTagName() : MarkMajorChanges::getMainTagName() );
+		// Is this a major change, or just a secondary change? Switch tag accordingly
+		$tags = array( $this->isSecondaryChange ? MarkMajorChanges::getSecondaryTagName() : MarkMajorChanges::getMainTagName() );
 
 		// Should we use DeferredUpdates::addCallableUpdate?
 		$status = ChangeTags::addTags( $tags, null, $revId );

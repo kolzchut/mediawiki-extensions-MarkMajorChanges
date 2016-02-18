@@ -15,5 +15,6 @@
 	"markmajorchange": "שינוי מהותי",
 	"markmajorchange-action-title": "שינוי מהותי בדף $1",
 	"markmajorchange-form-desc": "אתם עומדים להגדיר את הגרסה האחרונה כשינוי מהותי.",
-	"markmajorchanges-reason": "מה השתנה?"
+	"markmajorchanges-field-reason": "מה השתנה?",
+	"markmajorchanges-field-issecondary": "זה לא שינוי מהותי, אבל רלבנטי לתרגום לערבית"
 }
