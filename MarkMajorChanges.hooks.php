@@ -8,6 +8,14 @@
 
 class MarkMajorChangesHooks {
 
+	public static function onRegistration() {
+		// Override TagLogFormatter
+		global $wgLogActionsHandlers;
+		$wgLogActionsHandlers['tag/update'] = 'TagLogFormatterAdvanced';
+
+		return true;
+	}
+
 	/**
 	 * Add our new tag to the array of existing tags.
 	 *

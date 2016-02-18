@@ -11,10 +11,12 @@
 	"AutoloadClasses": {
 		"MarkMajorChanges": "MarkMajorChanges_body.php",
 		"MarkMajorChangesHooks": "MarkMajorChanges.hooks.php",
-		"MajorChangeAction": "MarkMajorChangeAction.php"
+		"MajorChangeAction": "MarkMajorChangeAction.php",
+		"TagLogFormatterAdvanced": "TagLogFormatterAdvanced.php"
 	},
 	"config": {
 	},
+	"callback": "MarkMajorChangesHooks::onRegistration",
 	"Hooks": {
 		"SkinTemplateNavigation": [
 			"MarkMajorChangesHooks::onSkinTemplateNavigation"
