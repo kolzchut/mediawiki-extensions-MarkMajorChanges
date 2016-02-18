@@ -23,6 +23,9 @@ class MajorChangeAction extends FormAction {
 			throw new PermissionsError( $this->getRequiredRight(), $errors );
 		}
 
+		// Use jQuery.plugin.byteLimit to limit "reason" according to DB column (255B)
+		$this->getOutput()->addModules( 'mediawiki.action.majorchange' );
+
 		parent::show();
 	}
 

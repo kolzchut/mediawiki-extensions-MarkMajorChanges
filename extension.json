@@ -39,7 +39,23 @@
 	"Actions": {
 		"markmajorchange": "MajorChangeAction"
 	},
-
+	"ResourceModules": {
+		"mediawiki.action.majorchange": {
+			"scripts": "mediawiki.action.majorchange.js",
+			"dependencies": [
+				"jquery.byteLimit"
+			],
+			"targets": [
+				"desktop",
+				"mobile"
+			],
+			"position": "bottom"
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "",
+		"remoteExtPath": "WikiRights/MarkMajorChanges"
+	},
 	"MessagesDirs": {
 		"MarkMajorChanges": [
 			"i18n"
