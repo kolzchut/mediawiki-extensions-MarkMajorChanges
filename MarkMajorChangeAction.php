@@ -57,11 +57,12 @@ class MajorChangeAction extends FormAction {
 				//'cssclass' => 'form-control'
 			),
 			'reason' => array(
-				'type' => 'text',
+				'type' => 'textarea',
 				'label-message' => 'markmajorchanges-reason',
 				'label' => 'What changed?',
 				'maxlength' => '200',
 				'size' => 60,
+				'rows' => 3,
 				'required' => true,
 				//'cssclass' => 'form-control' // Bootstrap3
 
@@ -135,6 +136,7 @@ class MajorChangeAction extends FormAction {
 
 	public function onSuccess() {
 		$status = $this->saveTags();
+		//@todo notify user according to actual status...
 
 		// Let the user know
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
