@@ -52,24 +52,24 @@ class MajorChangeAction extends FormAction {
 	}
 
 	protected function getFormFields() {
-		$fields = array(
-			'isSecondaryChange' => array(
-				'type' => 'check',
+		$fields = array();
+		if( $this->hasArabicLangLink() ) {
+			$fields[ 'isSecondaryChange' ] = array(
+				'type'          => 'check',
 				'label-message' => 'markmajorchanges-field-issecondary',
 				//'cssclass' => 'form-control'
-			),
-			'reason' => array(
-				'type' => 'textarea',
-				'label-message' => 'markmajorchanges-field-reason',
-				'label' => 'What changed?',
-				'maxlength' => '200',
-				'size' => 60,
-				'cols' => 60,
-				'rows' => 2,
-				'required' => true,
-				//'cssclass' => 'form-control' // Bootstrap3
-
-			)
+			);
+		}
+		$fields['reason'] = array(
+			'type' => 'textarea',
+			'label-message' => 'markmajorchanges-field-reason',
+			'label' => 'What changed?',
+			'maxlength' => '200',
+			'size' => 60,
+			'cols' => 60,
+			'rows' => 2,
+			'required' => true,
+			//'cssclass' => 'form-control' // Bootstrap3
 		);
 
 		return $fields;
@@ -114,17 +114,27 @@ class MajorChangeAction extends FormAction {
 
 		$dbw = wfGetDB( DB_MASTER );
 		$logId = $logEntry->insert( $dbw );
+
 		// Only send this to UDP, not RC, similar to patrol events
 		$logEntry->publish( $logId, 'udp' );
+		//$logEntry->publish( $logId );
 
 	}
 
 	protected function saveTags() {
+
 		$revId = $this->getTitle()->getLatestRevID();
 		$reason = $this->reason;
 		$user = $this->getUser();
-		// Is this a major change, or just a secondary change? Switch tag accordingly
-		$tags = array( $this->isSecondaryChange ? MarkMajorChanges::getSecondaryTagName() : MarkMajorChanges::getMainTagName() );
+
+		$tags = array();
+		// Is this a major change, or just a secondary change? Mark both for major
+		if ( $this->hasArabicLangLink() ) {
+			$tags[] = MarkMajorChanges::getSecondaryTagName();
+		}
+		if( !$this->isSecondaryChange ) {
+			$tags[] = MarkMajorChanges::getMainTagName();
+		}
 
 		// Should we use DeferredUpdates::addCallableUpdate?
 		$status = ChangeTags::addTags( $tags, null, $revId );
@@ -162,6 +172,40 @@ class MajorChangeAction extends FormAction {
 				'class' => 'btn'
 			)
 		);
+	}
+
+
+	private function hasArabicLangLink() {
+		$langLinks = $this->getPageLankLinks();
+		return isset( $langLinks['ar'] );
+	}
+
+
+
+
+	/**
+	 * Get an array of existing interlanguage links, with the language code in the key and the
+	 * title in the value.
+	 *
+	 * Taken from Core's LinksUpdate::getExistingInterlangs() [includes/deferred/LinksUpdate.php]
+	 *
+	 * @return array
+	 */
+	private function getPageLankLinks() {
+		$dbr = wfGetDB( DB_SLAVE );
+		$res = $dbr->select( 'langlinks', array( 'll_lang', 'll_title' ),
+			array( 'll_from' => $this->getTitle()->getArticleID() ), __METHOD__ );
+		$arr = array();
+		foreach ( $res as $row ) {
+			$arr[$row->ll_lang] = $row->ll_title;
+		}
+
+		return $arr;
+	}
+
+	//@todo get existing change tags so no one tries to resubmit
+	private function getExistingChangeTags() {
+		//$tags = Revision::
 	}
 
 

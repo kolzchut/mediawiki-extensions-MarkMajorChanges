@@ -1,6 +1,6 @@
 {
 	"name": "MarkMajorChanges",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"author": [
 		"Dror S. [FFS] ([http://www.kolzchut.org.il Kol-Zchut])"
 	],
@@ -8,11 +8,15 @@
 	"descriptionmsg": "markmajorchanges-desc",
 	"license-name": "GPL-2.0+",
 	"type": "other",
+	"SpecialPages": {
+		"MajorChangesLog": "SpecialMajorChangesLog"
+	},
 	"AutoloadClasses": {
 		"MarkMajorChanges": "MarkMajorChanges_body.php",
 		"MarkMajorChangesHooks": "MarkMajorChanges.hooks.php",
 		"MajorChangeAction": "MarkMajorChangeAction.php",
-		"TagLogFormatterAdvanced": "TagLogFormatterAdvanced.php"
+		"TagLogFormatterAdvanced": "TagLogFormatterAdvanced.php",
+		"SpecialMajorChangesLog": "SpecialMajorChangesLog.php"
 	},
 	"config": {
 	},
@@ -29,11 +33,15 @@
 		]
 	},
 	"AvailableRights": [
-		"markmajorchange"
+		"markmajorchange",
+		"majorchanges-log"
 	],
 	"GroupPermissions": {
 		"staff": {
 			"markmajorchange": true
+		},
+		"*": {
+			"majorchanges-log": true
 		}
 	},
 	"Actions": {
@@ -60,6 +68,9 @@
 		"MarkMajorChanges": [
 			"i18n"
 		]
+	},
+	"ExtensionMessagesFiles": {
+		"MajorChangesLogAlias": "MajorChangesLog.alias.php"
 	},
 	"manifest_version": 1
 }

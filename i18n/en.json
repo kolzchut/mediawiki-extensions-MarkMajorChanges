@@ -17,5 +17,16 @@
 	"markmajorchange-form-desc": "A Major Change is upon us.",
 	"markmajorchanges-field-reason": "What changed?",
 	"markmajorchanges-field-issecondary": "What changed?",
-	"markmajorchanges-generic-error": "There's an error of some kind. Maybe."
+	"markmajorchanges-generic-error": "There's an error of some kind. Maybe.",
+	"majorchangeslog": "Major Changes log",
+	"majorchanges-log": "view Major Changes log",
+	"majorchanges-log-filter": "Filter the log",
+	"majorchanges-log-user-filter": "User",
+	"majorchanges-log-title-filter": "Title",
+	"majorchanges-log-tag-filter": "Tag",
+	"majorchanges-log-mode-filter": "Show",
+	"majorchanges-log-mode-all": "All changes",
+	"majorchanges-log-mode-onlymajor": "Major changes only",
+	"majorchanges-log-mode-onlyminor": "Secondary changes only",
+	"majorchanges-log-noresults": "No results"
 }

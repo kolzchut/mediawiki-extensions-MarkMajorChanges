@@ -27,6 +27,15 @@ then logs it.
 
 ## Changelog
 
+### 0.0.3 [2016-02-29]
+- Hide secondary change checkbox on action page if the page doesn't have
+  an Arabic language link (Kol-Zchut centric, no way around this for now)
+- Automatically mark a change as a secondary change too, if it has a langlink
+  and it is being marked as a major change
+- New Special:MajorChangesLog, which shows only relevant log entires
+  AND allows filtering by the *revision's* tags (special:log only allows
+  filtering by the log entry's tags, which is useless for this).
+
 ### 0.0.2 [2016-02-17]
 Fix permission issues
 
