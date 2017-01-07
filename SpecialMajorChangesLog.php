@@ -14,11 +14,11 @@ class SpecialMajorChangesLog extends SpecialPage {
 
 	protected $mModeFilter;
 
-	protected $mAllowedModes = array(
+	protected $mAllowedModes = [
 		'all',
 		'onlymajor',
 		'onlyminor'
-	);
+	];
 
 	public function __construct() {
 		parent::__construct( 'MajorChangesLog', 'majorchanges-log' );
@@ -50,7 +50,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 
 	function searchForm() {
 		$output = Html::element( 'legend', null, $this->msg( 'majorchanges-log-filter' )->text() );
-		$fields = array();
+		$fields = [];
 		// Search conditions
 
 		$fields['majorchanges-log-user-filter'] =
@@ -67,7 +67,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$fields['majorchanges-log-mode-filter'] = $this->getModeFilter();
 
 		$output .= Xml::tags( 'form',
-			array( 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ),
+			[ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ],
 			Xml::buildForm( $fields, 'htmlform-submit' ) .
 			Html::hidden( 'title', $this->getPageTitle()->getPrefixedDBkey() )
 		);
@@ -80,17 +80,17 @@ class SpecialMajorChangesLog extends SpecialPage {
 	 * @return string Formatted HTML
 	 */
 	protected function getModeFilter() {
-		$options = array();
+		$options = [];
 
 		foreach ( $this->mAllowedModes as $mode ) {
 			// majorchanges-log-mode-all, majorchanges-log-mode-onlymajor, majorchanges-log-mode-onlyminor
 			$text = $this->msg( "majorchanges-log-mode-{$mode}" );
 
 			$options[] = Html::element(
-				'option', array(
+				'option', [
 					'value'    => $mode,
 					'selected' => ( $mode === $this->mModeFilter ),
-				),
+				],
 				$text
 			);
 		}
@@ -99,7 +99,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 		// Wrap options in a <select>
 		$ret .= Html::rawElement(
 			'select',
-			array( 'id' => 'wpModeFilter', 'name' => 'wpModeFilter' ),
+			[ 'id' => 'wpModeFilter', 'name' => 'wpModeFilter' ],
 			implode( "\n", $options )
 		);
 
@@ -119,14 +119,12 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$result = $pager->getResult();
 		if ( $result && $result->numRows() !== 0 ) {
 			$out->addHTML( $pager->getNavigationBar() .
-				Xml::tags( 'ul', array( 'class' => 'plainlinks' ), $pager->getBody() ) .
+				Xml::tags( 'ul', [ 'class' => 'plainlinks' ], $pager->getBody() ) .
 				$pager->getNavigationBar() );
 		} else {
 			$out->addWikiMsg( 'majorchanges-log-noresults' );
 		}
 	}
-
-
 }
 
 /**
@@ -148,10 +146,9 @@ class MajorChangesLogPager extends LogPager {
 
 		$extraConds = $this->limitByMode( $mode );
 
-
 		parent::__construct(
 			$loglist,
-			array( 'tag' ),
+			[ 'tag' ],
 			$performer,
 			$title,
 			null,
@@ -162,12 +159,12 @@ class MajorChangesLogPager extends LogPager {
 
 	protected function limitRevTag( $tag ) {
 		if ( empty( $tag ) ) {
-			return array();
+			return [];
 		}
-		return array(
+		return [
 			'ls_field' => 'Tag',
 			'ls_value' => $tag
-		);
+		];
 	}
 
 	protected function limitByMode( $mode ) {
@@ -176,12 +173,12 @@ class MajorChangesLogPager extends LogPager {
 		} elseif ( $mode === 'onlyminor' ) {
 			$tag = MarkMajorChanges::getSecondaryTagName();
 		} else {
-			return array();
+			return [];
 		}
 
-		return array(
+		return [
 			'ls_field' => 'Tag',
 			'ls_value' => $tag
-		);
+		];
 	}
 }

@@ -37,21 +37,19 @@ class TagLogFormatterAdvanced extends TagLogFormatter {
 	public function getActionLinks() {
 		$params = $this->getMessageParameters();
 
-		if ( !isset( $params[3] )  ) {
+		if ( !isset( $params[3] ) ) {
 			return '';
 		}
 
-
 		$oldid = $params[3];
-
 		$diffLink = Linker::linkKnown(
 			$this->entry->getTarget(),
 			$this->msg( 'diff' )->escaped(),
-			array(),
-			array(
+			[],
+			[
 				'oldid' => $oldid,
 				'diff' => 'prev',
-			)
+			]
 		);
 
 		return $this->msg( 'parentheses' )->rawParams( $diffLink )->escaped();

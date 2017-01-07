@@ -2,8 +2,8 @@
 
 
 class MarkMajorChanges {
-	static private $tagname = 'majorchange';
-	static private $secondarytagname = 'arabic';
+	private static $tagname = 'majorchange';
+	private static $secondarytagname = 'arabic';
 
 	public static function getMainTagName() {
 		return self::$tagname;

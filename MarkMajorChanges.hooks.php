@@ -40,14 +40,14 @@ class MarkMajorChangesHooks {
 		$user = $sktemplate->getUser();
 
 		if ( $user->isAllowedAll( 'changetags', 'markmajorchange' ) ) {
-			$urlParams = array(
+			$urlParams = [
 				'action' => 'markmajorchange',
-			);
+			];
 
-			$links['actions']['markmajorchange'] = array(
+			$links['actions']['markmajorchange'] = [
 				'text'	=> $sktemplate->msg( 'markmajorchanges-mark-btn' )->text(),
 				'href'	=>  $title->getLocalURL( $urlParams )
-			);
+			];
 		};
 
 	}

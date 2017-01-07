@@ -1,19 +1,19 @@
 <?php
 
-$specialPageAliases = array();
+$specialPageAliases = [];
 
 /** English (English) */
-$specialPageAliases['en'] = array(
-	'MajorChangesLog' => array( 'MajorChangesLog', 'Major Changes log', "Major Changes Log" ),
-);
+$specialPageAliases['en'] = [
+	'MajorChangesLog' => [ 'MajorChangesLog', 'Major Changes log', "Major Changes Log" ],
+];
 
 /** Hebrew (עברית) */
-$specialPageAliases['he'] = array(
-	'MajorChangesLog' => array( 'יומן שינויים מהותיים', 'שינויים מהותיים' ),
-);
+$specialPageAliases['he'] = [
+	'MajorChangesLog' => [ 'יומן שינויים מהותיים', 'שינויים מהותיים' ],
+];
 
 /** Arabic (العربية) */
-$specialPageAliases['ar'] = array(
-	//'MajorChangesLog' => array( '' ),
-);
+$specialPageAliases['ar'] = [
+	// 'MajorChangesLog' => [],
+];
 

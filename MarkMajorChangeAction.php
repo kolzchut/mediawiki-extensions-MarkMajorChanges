@@ -18,7 +18,9 @@ class MajorChangeAction extends FormAction {
 
 	public function show() {
 		// Additional security checking before parent::show()
-		$errors = $this->getTitle()->getUserPermissionsErrors( $this->getRequiredRight(), $this->getUser() );
+		$errors = $this->getTitle()->getUserPermissionsErrors(
+			$this->getRequiredRight(), $this->getUser()
+		);
 		if ( count( $errors ) ) {
 			throw new PermissionsError( $this->getRequiredRight(), $errors );
 		}
@@ -52,15 +54,15 @@ class MajorChangeAction extends FormAction {
 	}
 
 	protected function getFormFields() {
-		$fields = array();
-		if( $this->hasArabicLangLink() ) {
-			$fields[ 'isSecondaryChange' ] = array(
+		$fields = [];
+		if ( $this->hasArabicLangLink() ) {
+			$fields[ 'isSecondaryChange' ] = [
 				'type'          => 'check',
 				'label-message' => 'markmajorchanges-field-issecondary',
-				//'cssclass' => 'form-control'
-			);
+				// 'cssclass' => 'form-control'
+			];
 		}
-		$fields['reason'] = array(
+		$fields['reason'] = [
 			'type' => 'textarea',
 			'label-message' => 'markmajorchanges-field-reason',
 			'label' => 'What changed?',
@@ -69,8 +71,8 @@ class MajorChangeAction extends FormAction {
 			'cols' => 60,
 			'rows' => 2,
 			'required' => true,
-			//'cssclass' => 'form-control' // Bootstrap3
-		);
+			// 'cssclass' => 'form-control' // Bootstrap3
+		];
 
 		return $fields;
 	}
@@ -104,20 +106,20 @@ class MajorChangeAction extends FormAction {
 			$logEntry->setTarget( SpecialPage::getTitleFor( 'Tags' ) );
 		}
 
-		$logParams = array(
+		$logParams = [
 			'4::revid' => $revId,
 			'6:list:tagsAdded' => $tags,
 			'7:number:tagsAddedCount' => count( $tags ),
-		);
+		];
 		$logEntry->setParameters( $logParams );
-		$logEntry->setRelations( array( 'Tag' => $tags ) );
+		$logEntry->setRelations( [ 'Tag' => $tags ] );
 
 		$dbw = wfGetDB( DB_MASTER );
 		$logId = $logEntry->insert( $dbw );
 
 		// Only send this to UDP, not RC, similar to patrol events
 		$logEntry->publish( $logId, 'udp' );
-		//$logEntry->publish( $logId );
+		// $logEntry->publish( $logId );
 
 	}
 
@@ -127,20 +129,20 @@ class MajorChangeAction extends FormAction {
 		$reason = $this->reason;
 		$user = $this->getUser();
 
-		$tags = array();
+		$tags = [];
 		// Is this a major change, or just a secondary change? Mark both for major
 		if ( $this->hasArabicLangLink() ) {
 			$tags[] = MarkMajorChanges::getSecondaryTagName();
 		}
-		if( !$this->isSecondaryChange ) {
+		if ( !$this->isSecondaryChange ) {
 			$tags[] = MarkMajorChanges::getMainTagName();
 		}
 
 		// Should we use DeferredUpdates::addCallableUpdate?
 		$status = ChangeTags::addTags( $tags, null, $revId );
-		if( $status === true ) {
+		if ( $status === true ) {
 			$this->logTagAdded( $tags, $revId, $user, $reason );
-			//$this->getTitle()->isMajorChange == true;
+			// $this->getTitle()->isMajorChange == true;
 			return true;
 		}
 
@@ -149,9 +151,8 @@ class MajorChangeAction extends FormAction {
 
 	public function onSuccess() {
 		$status = $this->saveTags();
-		//@todo notify user according to actual status...
-
 		// Let the user know
+		// @todo notify user according to actual status...
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
 		$this->getOutput()->wrapWikiMsg( "<div class=\"successbox\">\n$1\n</div>",
 			'tags-edit-success' );
@@ -159,7 +160,7 @@ class MajorChangeAction extends FormAction {
 
 
 
-	protected function alterForm( HTMLForm &$form ) {
+	protected function alterForm( HTMLForm $form ) {
 		$form->setDisplayFormat( 'div' );
 
 		// Suppress default submit, so we can add one that is slightly nicer looking
@@ -168,9 +169,7 @@ class MajorChangeAction extends FormAction {
 			'submit',
 			$this->msg( 'htmlform-submit' )->text(),
 			null,
-			array(
-				'class' => 'btn'
-			)
+			[ 'class' => 'btn' ]
 		);
 	}
 
@@ -193,9 +192,11 @@ class MajorChangeAction extends FormAction {
 	 */
 	private function getPageLankLinks() {
 		$dbr = wfGetDB( DB_SLAVE );
-		$res = $dbr->select( 'langlinks', array( 'll_lang', 'll_title' ),
-			array( 'll_from' => $this->getTitle()->getArticleID() ), __METHOD__ );
-		$arr = array();
+		$res = $dbr->select(
+			'langlinks', [ 'll_lang', 'll_title' ],
+			[ 'll_from' => $this->getTitle()->getArticleID() ], __METHOD__
+		);
+		$arr = [];
 		foreach ( $res as $row ) {
 			$arr[$row->ll_lang] = $row->ll_title;
 		}
@@ -203,9 +204,9 @@ class MajorChangeAction extends FormAction {
 		return $arr;
 	}
 
-	//@todo get existing change tags so no one tries to resubmit
+	// @todo get existing change tags so no one tries to resubmit
 	private function getExistingChangeTags() {
-		//$tags = Revision::
+		// $tags = Revision::
 	}
 
 
