@@ -11,7 +11,7 @@ class MarkMajorChangesHooks {
 	public static function onRegistration() {
 		// Override TagLogFormatter
 		global $wgLogActionsHandlers;
-		$wgLogActionsHandlers['tag/update'] = 'TagLogFormatterAdvanced';
+		$wgLogActionsHandlers['tag/update'] = 'MajorChangesTagLogFormatter';
 
 		return true;
 	}

@@ -15,8 +15,9 @@
 		"MarkMajorChanges": "MarkMajorChanges_body.php",
 		"MarkMajorChangesHooks": "MarkMajorChanges.hooks.php",
 		"MajorChangeAction": "MarkMajorChangeAction.php",
-		"TagLogFormatterAdvanced": "TagLogFormatterAdvanced.php",
-		"SpecialMajorChangesLog": "SpecialMajorChangesLog.php"
+		"MajorChangesTagLogFormatter": "MajorChangesTagLogFormatter.php",
+		"SpecialMajorChangesLog": "SpecialMajorChangesLog.php",
+		"MajorChangesLogPager": "MajorChangesLogPager.php"
 	},
 	"config": {
 	},

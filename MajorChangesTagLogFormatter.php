@@ -19,7 +19,7 @@
 /**
  * This class formats tag log entries.
  * It is an extension of the default TagLogFormatter,
- * in order to add diff links. The extemsion overrides
+ * in order to add diff links. The extension overrides
  * $wgLogActionsHandlers
  *
  * Parameters (one-based indexes):
@@ -32,26 +32,29 @@
  *
  */
 
-class TagLogFormatterAdvanced extends TagLogFormatter {
+class MajorChangesTagLogFormatter extends TagLogFormatter {
 	// This returns '' in the default TagLogFormatter
 	public function getActionLinks() {
-		$params = $this->getMessageParameters();
+		$links = parent::getActionLinks();
 
-		if ( !isset( $params[3] ) ) {
-			return '';
+		$params = $this->getMessageParameters();
+		if ( isset( $params[3] ) ) {
+			$oldid = $params[3];
+			$linkRenderer = MediaWiki\MediaWikiServices::getInstance()->getLinkRenderer();
+			$diffLink = $linkRenderer->makeKnownLink(
+				$this->entry->getTarget(),
+				$this->msg( 'diff' )->escaped(),
+				[],
+				[
+					'oldid' => $oldid,
+					'diff' => 'prev',
+				]
+			);
+
+			$links .= $this->msg( 'parentheses' )->rawParams( $diffLink )->escaped();
+
 		}
 
-		$oldid = $params[3];
-		$diffLink = Linker::linkKnown(
-			$this->entry->getTarget(),
-			$this->msg( 'diff' )->escaped(),
-			[],
-			[
-				'oldid' => $oldid,
-				'diff' => 'prev',
-			]
-		);
-
-		return $this->msg( 'parentheses' )->rawParams( $diffLink )->escaped();
+		return $links;
 	}
 }
