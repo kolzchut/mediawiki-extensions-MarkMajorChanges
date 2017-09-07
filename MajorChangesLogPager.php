@@ -5,6 +5,8 @@
  */
 class MajorChangesLogPager extends LogPager {
 	private $mStatusFilter;
+	private $mModeFilter;
+
 
 	function __construct( $mode, $tag, $performer = null, $title = '', $status = null ) {
 		// Override TagLogFormatter. We don't want to override it system-wide, just here
@@ -12,6 +14,7 @@ class MajorChangesLogPager extends LogPager {
 		$wgLogActionsHandlers['tag/update'] = 'MajorChangesTagLogFormatter';
 
 		$this->mStatusFilter = $status;
+		$this->mModeFilter = $mode;
 
 		# Create a LogPager item to get the results and a LogEventsList item to format them...
 		$loglist = new LogEventsList(
@@ -31,16 +34,13 @@ class MajorChangesLogPager extends LogPager {
 			false,
 			null
 		);
-
-		// We want the DB object pulled up by the parent, so we do this after constructing it:
-		$this->limitToRelevantTags( $mode );
-
-
 	}
 
 	public function getQueryInfo() {
-		$info = parent::getQueryInfo();
 		$db = $this->getDatabase();
+		$this->limitToRelevantTags();
+
+		$info = parent::getQueryInfo();
 
 		switch ( $this->mStatusFilter ) {
 			case 'queue':
@@ -57,16 +57,16 @@ class MajorChangesLogPager extends LogPager {
 			$info[ 'conds' ] = array_merge( $info[ 'conds' ], $cond );
 		}
 
+
 		return $info;
 	}
 
 
-	protected function limitToRelevantTags( $mode ) {
-		$dbr       = $this->getDatabase();
+	protected function limitToRelevantTags() {
 		$mainTag   = MarkMajorChanges::getMainTagName();
 		$secondTag = MarkMajorChanges::getSecondaryTagName();
 
-		switch ( $mode ) {
+		switch ( $this->mModeFilter ) {
 			case 'onlymajor':
 				$tagList = [ $mainTag ];
 				break;
@@ -78,7 +78,21 @@ class MajorChangesLogPager extends LogPager {
 		}
 
 		$this->mConds[ 'ls_field' ] = 'Tag';
-		$this->mConds[]  = 'ls_value IN (' . $dbr->makeList( $tagList ) . ')';
+		$this->mConds[]  = 'ls_value IN (' . $this->getDatabase()->makeList( $tagList ) . ')';
+	}
+
+	public function getTotalNumRows() {
+		$db = $this->getDatabase();
+		$info = $this->getQueryInfo();
+
+		return $db->selectRowCount(
+			$info['tables'],
+			'*',
+			$info['conds'],
+			__METHOD__,
+			[],
+			$info['join_conds']
+		);
 	}
 
 }

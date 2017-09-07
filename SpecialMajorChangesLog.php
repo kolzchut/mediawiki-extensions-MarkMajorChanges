@@ -201,9 +201,12 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$pager->doQuery();
 		$logBody = $pager->getBody();
 		if ( $logBody ) {
+			$numRecordsMsg = $this->msg( 'majorchanges-log-filter-num-records' )
+			                      ->numParams( $pager->getTotalNumRows() );
 			$out->addHTML(
 				$pager->getNavigationBar() .
 				$this->getActionButtons(
+					$numRecordsMsg->text() .
 					$loglist->beginLogEventsList() .
 					$logBody .
 					$loglist->endLogEventsList()

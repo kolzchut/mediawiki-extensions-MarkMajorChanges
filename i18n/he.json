@@ -20,6 +20,7 @@
 	"majorchangeslog": "יומן שינויים מהותיים",
 	"majorchanges-log": "צפיה ביומן שינויים מהותיים",
 	"majorchanges-log-filter": "סינון רשומות היומן",
+	"majorchanges-log-filter-num-records": "סה\"כ רשומות לסינון זה: $1",
 	"majorchanges-log-markdone": "טיפול בשינויים",
 	"majorchanges-log-user-filter": "משתמש",
 	"majorchanges-log-title-filter": "כותרת",

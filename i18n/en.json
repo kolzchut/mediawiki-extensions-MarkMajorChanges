@@ -21,6 +21,7 @@
 	"majorchangeslog": "Major Changes log",
 	"majorchanges-log": "view Major Changes log",
 	"majorchanges-log-filter": "Filter the log",
+	"majorchanges-log-filter-num-records": "Total number of records for this filter: $1",
 	"majorchanges-log-markdone": "Mark changes",
 	"majorchanges-log-user-filter": "User",
 	"majorchanges-log-title-filter": "Title",
