@@ -9,15 +9,18 @@ class SpecialMajorChangesLog extends SpecialPage {
 	 * @var Title
 	 */
 	protected $mTitleFilter;
-
 	protected $mRevTagFilter;
-
 	protected $mModeFilter;
-
 	protected $mAllowedModes = [
 		'all',
 		'onlymajor',
 		'onlyminor'
+	];
+	protected $mStatusFilter;
+	protected $mAllowedStatus = [
+		'all',
+		'done',
+		'queue'
 	];
 
 	public function __construct() {
@@ -32,8 +35,12 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$this->setHeaders();
 		$this->loadParameters();
 
+		$this->getOutput()->addModules( 'mediawiki.special.majorchanges' );
+
+
 		// Show the search form.
 		$this->searchForm();
+
 		// Show the log itself.
 		$this->showList();
 	}
@@ -45,6 +52,47 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$this->mRevTagFilter = $request->getText( 'wpRevTagFilter' );
 		$this->mUserFilter = trim( $request->getText( 'wpUserFilter' ) );
 		$this->mModeFilter = trim( $request->getText( 'wpModeFilter' ) );
+		$this->mStatusFilter = trim( $request->getText( 'wpStatusFilter' ) );
+
+	}
+
+	private function getActionButtons( $formcontents ) {
+		if ( !ChangeTags::showTagEditingUI( $this->getUser() ) ) {
+			# If the user doesn't have the ability to edit tags, don't bother showing them the button(s).
+			return $formcontents;
+		}
+
+		$s = Html::openElement(
+				'form',
+				[ 'method' => 'post', 'action' => wfScript(), 'id' => 'mw-log-deleterevision-submit' ]
+			) . "\n";
+		$s .= Html::hidden( 'action', 'historysubmit' ) . "\n";
+		$s .= Html::hidden( 'type', 'logging' ) . "\n";
+		$s .= Html::hidden( 'wpTagList[]', 'שינוי מהותי טופל' ) . "\n";
+		$s .= Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() );
+		$s .= Html::hidden( 'wpSubmit', '1' ) . "\n";
+
+
+		$buttons = Html::element(
+			'button',
+			[
+				'type' => 'submit',
+				'name' => 'editchangetags',
+				'value' => '1',
+				'class' => "editchangetags-log-submit mw-log-editchangetags-button"
+			],
+			$this->msg( 'majorchanges-log-edit-tags' )->text()
+		) . "\n";
+
+		$buttons .= ( new ListToggle( $this->getOutput() ) )->getHTML();
+		$legend = Html::element( 'legend', null, $this->msg( 'majorchanges-log-markdone' )->text() );
+		$buttons = Xml::tags( 'fieldset', null, $legend . $buttons );
+
+
+		$s .= $buttons . $formcontents . $buttons;
+		$s .= Html::closeElement( 'form' );
+
+		return $s;
 
 	}
 
@@ -65,6 +113,8 @@ class SpecialMajorChangesLog extends SpecialPage {
 		*/
 
 		$fields['majorchanges-log-mode-filter'] = $this->getModeFilter();
+		$fields['majorchanges-log-status-filter'] = $this->getStatusFilter();
+
 
 		$output .= Xml::tags( 'form',
 			[ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ],
@@ -84,7 +134,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 
 		foreach ( $this->mAllowedModes as $mode ) {
 			// majorchanges-log-mode-all, majorchanges-log-mode-onlymajor, majorchanges-log-mode-onlyminor
-			$text = $this->msg( "majorchanges-log-mode-{$mode}" );
+			$text = $this->msg( "majorchanges-log-mode-{$mode}" )->escaped();
 
 			$options[] = Html::element(
 				'option', [
@@ -106,21 +156,60 @@ class SpecialMajorChangesLog extends SpecialPage {
 		return $ret;
 	}
 
-	function showList() {
+	protected function getStatusFilter() {
+		$options = [];
+
+		foreach ( $this->mAllowedStatus as $status ) {
+			// majorchanges-log-status-all, majorchanges-log-status-done, majorchanges-log-status-queue
+			$text = $this->msg( "majorchanges-log-status-{$status}" )->escaped();
+
+			$options[] = Html::element(
+				'option', [
+				'value'    => $status,
+				'selected' => ( $status === $this->mStatusFilter ),
+			],
+				$text
+			);
+		}
+
+		$ret = '';
+		// Wrap options in a <select>
+		$ret .= Html::rawElement(
+			'select',
+			[ 'id' => 'wpStatusFilter', 'name' => 'wpStatusFilter' ],
+			implode( "\n", $options )
+		);
+
+		return $ret;
+	}
+
+	private function showList() {
 		$out = $this->getOutput();
+		$loglist = new LogEventsList(
+			$this->getContext(),
+			null,
+			LogEventsList::USE_CHECKBOXES
+		);
 
 		$pager = new MajorChangesLogPager(
 			$this->mModeFilter,
 			$this->mRevTagFilter,
 			$this->mUserFilter,
-			$this->mTitleFilter
+			$this->mTitleFilter,
+			$this->mStatusFilter
 		);
 		$pager->doQuery();
-		$result = $pager->getResult();
-		if ( $result && $result->numRows() !== 0 ) {
-			$out->addHTML( $pager->getNavigationBar() .
-				Xml::tags( 'ul', [ 'class' => 'plainlinks' ], $pager->getBody() ) .
-				$pager->getNavigationBar() );
+		$logBody = $pager->getBody();
+		if ( $logBody ) {
+			$out->addHTML(
+				$pager->getNavigationBar() .
+				$this->getActionButtons(
+					$loglist->beginLogEventsList() .
+					$logBody .
+					$loglist->endLogEventsList()
+				) .
+				$pager->getNavigationBar()
+			);
 		} else {
 			$out->addWikiMsg( 'majorchanges-log-noresults' );
 		}

@@ -20,13 +20,20 @@
 	"majorchangeslog": "יומן שינויים מהותיים",
 	"majorchanges-log": "צפיה ביומן שינויים מהותיים",
 	"majorchanges-log-filter": "סינון רשומות היומן",
+	"majorchanges-log-markdone": "טיפול בשינויים",
 	"majorchanges-log-user-filter": "משתמש",
 	"majorchanges-log-title-filter": "כותרת",
 	"majorchanges-log-tag-filter": "תגית",
-	"majorchanges-log-mode-filter": "הצג",
+	"majorchanges-log-mode-filter": "סוג שינוי",
+	"majorchanges-log-status-filter": "סטטוס",
+	"majorchanges-log-status-all": "הכל",
+	"majorchanges-log-status-done": "טופלו",
+	"majorchanges-log-status-queue": "לטיפול",
 	"majorchanges-log-mode-all": "כל השינויים",
 	"majorchanges-log-mode-onlymajor": "שינויים מהותיים בלבד",
 	"majorchanges-log-mode-onlyminor": "שינויים רלוונטים לערבית בלבד",
-	"majorchanges-log-noresults": "אין תוצאות"
+	"majorchanges-log-noresults": "אין תוצאות",
+	"majorchanges-log-edit-tags": "סמן שינויים כמטופלים",
+	"logentry-majorchanges": "$1 {{GENDER:$2|סימן|סימנה}} את גרסה $4 של $3 בתגיות $6"
 
 }

@@ -1,12 +1,13 @@
 MarkMajorChanges extension for MediaWiki
 ========================================
 
-NOTE: this is a custom extension for Kol-Zchut (kolz.org.il).
+NOTE: this is a custom extension for Kol-Zchut (kolzchut.org.il).
       It was not designed with public use in mind.
 
 The extension adds a shortcut to the action of adding a
 "major change" or "arabic" revision tag to the latest
 revision of an article, including logging it.
+It also allows to mark those log lines as "taken care of".
 
 ## Technical
 ChangeTags and SpecialEditTags aren't modular enough, so
@@ -26,6 +27,14 @@ then logs it.
 
 
 ## Changelog
+
+### 0.1.0 [2017-09-07]
+- Allow to mark a change as "taken care of" when viewing the log.
+  This uses MW's default capability of applying tags to log lines as
+  well.
+- The log can be filtered by handled/queued changes.
+- i18n has taken another hit - the extension is even more
+  Kol-Zchut's-specific than ever.
 
 ### 0.0.3 [2016-02-29]
 - Hide secondary change checkbox on action page if the page doesn't have

@@ -21,6 +21,7 @@
 	"majorchangeslog": "Major Changes log",
 	"majorchanges-log": "view Major Changes log",
 	"majorchanges-log-filter": "Filter the log",
+	"majorchanges-log-markdone": "Mark changes",
 	"majorchanges-log-user-filter": "User",
 	"majorchanges-log-title-filter": "Title",
 	"majorchanges-log-tag-filter": "Tag",
@@ -28,5 +29,9 @@
 	"majorchanges-log-mode-all": "All changes",
 	"majorchanges-log-mode-onlymajor": "Major changes only",
 	"majorchanges-log-mode-onlyminor": "Secondary changes only",
-	"majorchanges-log-noresults": "No results"
+	"majorchanges-log-noresults": "No results",
+	"majorchanges-log-edit-tags": "Mark changes as done",
+	"logentry-majorchanges": "$1 {{GENDER:$2|marked}} revision $4 of $3 as $6"
+
+
 }
