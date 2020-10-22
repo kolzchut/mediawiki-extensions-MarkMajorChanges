@@ -11,6 +11,8 @@ class SpecialMajorChangesLog extends SpecialPage {
 	protected $mTitleFilter;
 	protected $mRevTagFilter;
 	protected $mModeFilter;
+	protected $mStartDateFilter;
+	protected $mEndDateFilter;
 	protected $mAllowedModes = [
 		'all',
 		'onlymajor',
@@ -33,27 +35,23 @@ class SpecialMajorChangesLog extends SpecialPage {
 
 	public function execute( $parameter ) {
 		$this->setHeaders();
-		$this->loadParameters();
-
+		$this->outputHeader();
 		$this->getOutput()->addModules( 'mediawiki.special.majorchanges' );
 
+		$opts = new FormOptions();
+		$opts->add( 'page', '' );
+		$opts->add( 'user', '' );
+		$opts->add( 'mode', '' );
+		$opts->add( 'status', '' );
+		$opts->add( 'start', '' );
+		$opts->add( 'end', '' );
+		$opts->fetchValuesFromRequest( $this->getRequest() );
 
 		// Show the search form.
 		$this->searchForm();
 
 		// Show the log itself.
-		$this->showList();
-	}
-
-	function loadParameters() {
-		$request = $this->getRequest();
-
-		$this->mTitleFilter = trim( $request->getText( 'wpTitleFilter' ) );
-		$this->mRevTagFilter = $request->getText( 'wpRevTagFilter' );
-		$this->mUserFilter = trim( $request->getText( 'wpUserFilter' ) );
-		$this->mModeFilter = trim( $request->getText( 'wpModeFilter' ) );
-		$this->mStatusFilter = trim( $request->getText( 'wpStatusFilter' ) );
-
+		$this->showList( $opts );
 	}
 
 	private function getActionButtons( $formcontents ) {
@@ -97,32 +95,72 @@ class SpecialMajorChangesLog extends SpecialPage {
 	}
 
 	function searchForm() {
-		$output = Html::element( 'legend', null, $this->msg( 'majorchanges-log-filter' )->text() );
-		$fields = [];
-		// Search conditions
+		$formDescriptor = [
+			'user' => [
+				'type' => 'user',
+				'name' => 'user',
+				'label-message' => 'majorchanges-log-user-filter',
+			],
+			'page' => [
+				'type' => 'title',
+				'name' => 'page',
+				'label-message' => 'majorchanges-log-title-filter',
+			],
+			'mode' => [
+				'type' => 'select',
+				'name' => 'mode',
+				'options-messages' => $this->getModeFilterOptions(),
+				'label-message' => 'majorchanges-log-mode-filter'
+			],
+			'status' => [
+				'type' => 'select',
+				'name' => 'status',
+				'options-messages' => $this->getStatusFilterOptions(),
+				'label-message' => 'majorchanges-log-status-filter'
+			],
+			'start' => [
+				'type' => 'date',
+				'name' => 'start',
+				'label-message' => 'majorchanges-start-date-filter'
+			],
+			'end' => [
+				'type' => 'date',
+				'name' => 'end',
+				'label-message' => 'majorchanges-end-date-filter'
+			]
+		];
 
-		$fields['majorchanges-log-user-filter'] =
-			Html::input( 'wpUserFilter', $this->mUserFilter );
+		HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() )
+		        ->setWrapperLegendMsg( 'majorchanges-log-filter' )
+		        ->setSubmitTextMsg( 'htmlform-submit' )
+			    ->setAction( $this->getPageTitle()->getLocalURL() )
+		        ->setMethod( 'get' )
+		        ->prepareForm()
+		        ->displayForm( false );
+	}
 
-		$fields['majorchanges-log-title-filter'] =
-			Html::input( 'wpTitleFilter', $this->mTitleFilter );
+	protected function getModeFilterOptions() {
+		$options = [];
 
-		/*
-		$fields['majorchanges-log-tag-filter'] =
-			Html::input( 'wpRevTagFilter', $this->mRevTagFilter );
-		*/
+		foreach ( $this->mAllowedModes as $mode ) {
+			// majorchanges-log-mode-all, majorchanges-log-mode-onlymajor, majorchanges-log-mode-onlyminor
+			$msgName = "majorchanges-log-mode-{$mode}";
+			$options[ $msgName ] = $mode;
+		}
 
-		$fields['majorchanges-log-mode-filter'] = $this->getModeFilter();
-		$fields['majorchanges-log-status-filter'] = $this->getStatusFilter();
+		return $options;
+	}
 
+	protected function getStatusFilterOptions() {
+		$options = [];
 
-		$output .= Xml::tags( 'form',
-			[ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ],
-			Xml::buildForm( $fields, 'htmlform-submit' ) .
-			Html::hidden( 'title', $this->getPageTitle()->getPrefixedDBkey() )
-		);
-		$output = Xml::tags( 'fieldset', null, $output );
-		$this->getOutput()->addHTML( $output );
+		foreach ( $this->mAllowedStatus as $status ) {
+			// majorchanges-log-status-all, majorchanges-log-status-done, majorchanges-log-status-queue
+			$msgName = "majorchanges-log-status-{$status}";
+			$options[ $msgName ] = $status;
+		}
+
+		return $options;
 	}
 
 	/**
@@ -183,8 +221,10 @@ class SpecialMajorChangesLog extends SpecialPage {
 		return $ret;
 	}
 
-	private function showList() {
+	private function showList( FormOptions $opts ) {
 		$out = $this->getOutput();
+
+		# Create a LogPager item to get the results and a LogEventsList item to format them...
 		$loglist = new LogEventsList(
 			$this->getContext(),
 			null,
@@ -192,11 +232,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 		);
 
 		$pager = new MajorChangesLogPager(
-			$this->mModeFilter,
-			$this->mRevTagFilter,
-			$this->mUserFilter,
-			$this->mTitleFilter,
-			$this->mStatusFilter
+			$loglist, $opts
 		);
 		$pager->doQuery();
 		$logBody = $pager->getBody();

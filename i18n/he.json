@@ -26,6 +26,8 @@
 	"majorchanges-log-title-filter": "כותרת",
 	"majorchanges-log-tag-filter": "תגית",
 	"majorchanges-log-mode-filter": "סוג שינוי",
+	"majorchanges-start-date-filter": "מתאריך",
+	"majorchanges-end-date-filter": "עד תאריך",
 	"majorchanges-log-status-filter": "סטטוס",
 	"majorchanges-log-status-all": "הכל",
 	"majorchanges-log-status-done": "טופלו",

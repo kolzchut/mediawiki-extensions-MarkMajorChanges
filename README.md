@@ -28,6 +28,12 @@ then logs it.
 
 ## Changelog
 
+### 0.2.0 [2020-10-21]
+- Special page updated:
+  - Add the option to filter by start/end date
+  - Use OOUI for display
+  - Use FormOptions and a form descriptor to handle all the fields instead of manually building it
+
 ### 0.1.0 [2017-09-07]
 - Allow to mark a change as "taken care of" when viewing the log.
   This uses MW's default capability of applying tags to log lines as

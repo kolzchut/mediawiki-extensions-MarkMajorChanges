@@ -27,6 +27,8 @@
 	"majorchanges-log-title-filter": "Title",
 	"majorchanges-log-tag-filter": "Tag",
 	"majorchanges-log-mode-filter": "Show",
+	"majorchanges-start-date-filter": "From date",
+	"majorchanges-end-date-filter": "To date",
 	"majorchanges-log-mode-all": "All changes",
 	"majorchanges-log-mode-onlymajor": "Major changes only",
 	"majorchanges-log-mode-onlyminor": "Secondary changes only",

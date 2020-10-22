@@ -4,30 +4,32 @@
  * @ingroup SpecialPage Pager
  */
 class MajorChangesLogPager extends LogPager {
-	private $mStatusFilter;
-	private $mModeFilter;
+	private $status;
+	private $mode;
+	private $startDate;
+	private $endDate;
+	protected $mConds;
 
 
-	function __construct( $mode, $tag, $performer = null, $title = '', $status = null ) {
+	/**
+	 * @param IContextSource $context
+	 * @param FormOptions $opts
+	 */
+	function __construct( LogEventsList $logEventsList, FormOptions $opts ) {
 		// Override TagLogFormatter. We don't want to override it system-wide, just here
 		global $wgLogActionsHandlers;
 		$wgLogActionsHandlers['tag/update'] = 'MajorChangesTagLogFormatter';
 
-		$this->mStatusFilter = $status;
-		$this->mModeFilter = $mode;
-
-		# Create a LogPager item to get the results and a LogEventsList item to format them...
-		$loglist = new LogEventsList(
-			$this->getContext(),
-			null,
-			LogEventsList::USE_CHECKBOXES
-		);
+		$this->status    = $opts->getValue( 'status' );
+		$this->startDate = $opts->getValue( 'start' );
+		$this->endDate   = $opts->getValue( 'end' );
+		$this->mode      = $opts->getValue( 'mode' );
 
 		parent::__construct(
-			$loglist,
+			$logEventsList,
 			[ 'tag' ],
-			$performer,
-			$title,
+			$opts->getValue( 'user' ),
+			$opts->getValue( 'page' ),
 			'',
 			[],
 			false,
@@ -39,10 +41,11 @@ class MajorChangesLogPager extends LogPager {
 	public function getQueryInfo() {
 		$db = $this->getDatabase();
 		$this->limitToRelevantTags();
+		$this->limitByDates();
 
 		$info = parent::getQueryInfo();
 
-		switch ( $this->mStatusFilter ) {
+		switch ( $this->status ) {
 			case 'queue':
 				$cond = [ 'ct_tag IS NULL OR ct_tag != ' . $db->addQuotes( 'שינוי מהותי טופל' ) ];
 				break;
@@ -57,7 +60,6 @@ class MajorChangesLogPager extends LogPager {
 			$info[ 'conds' ] = array_merge( $info[ 'conds' ], $cond );
 		}
 
-
 		return $info;
 	}
 
@@ -66,7 +68,7 @@ class MajorChangesLogPager extends LogPager {
 		$mainTag   = MarkMajorChanges::getMainTagName();
 		$secondTag = MarkMajorChanges::getSecondaryTagName();
 
-		switch ( $this->mModeFilter ) {
+		switch ( $this->mode ) {
 			case 'onlymajor':
 				$tagList = [ $mainTag ];
 				break;
@@ -80,6 +82,21 @@ class MajorChangesLogPager extends LogPager {
 		$this->mConds[ 'ls_field' ] = 'Tag';
 		$this->mConds[]  = 'ls_value IN (' . $this->getDatabase()->makeList( $tagList ) . ')';
 	}
+
+	protected function limitByDates() {
+		$dbr = wfGetDB( DB_REPLICA );
+		if ( $this->startDate ) {
+			$this->mConds[] = 'log_timestamp >= ' .
+			           $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );
+		}
+
+		if ( $this->endDate ) {
+			// Add 1 day, so we check for "any date before tomorrow"
+			$this->mConds[] = 'log_timestamp < ' .
+			           $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->endDate . ' +1 day' ) ) );
+		}
+	}
+
 
 	public function getTotalNumRows() {
 		$db = $this->getDatabase();
