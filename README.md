@@ -9,6 +9,16 @@ The extension adds a shortcut to the action of adding a
 revision of an article, including logging it.
 It also allows to mark those log lines as "taken care of".
 
+## Usage
+Adds an action to a page to mark as major change. This action is logged. the log can be viewed at
+[[Special:MajorChangesLog]].
+
+Also adds an API query, majorchangeslogevents, used this way:
+
+```api.php?action=query&format=json&prop=info&list=majorchangeslogevents```
+
+It uses the same parameters as ```logevents```, but sets the action as tag/update and adds a URL.
+
 ## Technical
 ChangeTags and SpecialEditTags aren't modular enough, so
 I was forced to rip parts of each to use here (such as
@@ -22,11 +32,13 @@ then logs it.
 - Better design for the form
 - Show already applied tags on the action screen
 - AJAX form?
-- See about changing MediaWiki core so that a user
-  can apply extension-set tags.
+- See about changing MediaWiki core so that a user can apply extension-set tags.
 
 
 ## Changelog
+
+### 0.3.0 [2020-10-23]
+- Add an API query to retrieve the log (based on query/logevents)
 
 ### 0.2.0 [2020-10-21]
 - Special page updated:

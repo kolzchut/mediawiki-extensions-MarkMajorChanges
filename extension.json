@@ -1,6 +1,6 @@
 {
 	"name": "MarkMajorChanges",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"author": [
 		"Dror S. [FFS] ([http://www.kolzchut.org.il Kol-Zchut])"
 	],
@@ -11,13 +11,17 @@
 	"SpecialPages": {
 		"MajorChangesLog": "SpecialMajorChangesLog"
 	},
+	"APIListModules": {
+		"majorchangeslogevents": "ApiQueryMajorChangesLogEvents"
+	},
 	"AutoloadClasses": {
 		"MarkMajorChanges": "MarkMajorChanges_body.php",
 		"MarkMajorChangesHooks": "MarkMajorChanges.hooks.php",
 		"MajorChangeAction": "MarkMajorChangeAction.php",
 		"MajorChangesTagLogFormatter": "MajorChangesTagLogFormatter.php",
 		"SpecialMajorChangesLog": "SpecialMajorChangesLog.php",
-		"MajorChangesLogPager": "MajorChangesLogPager.php"
+		"MajorChangesLogPager": "MajorChangesLogPager.php",
+		"ApiQueryMajorChangesLogEvents": "ApiQueryMajorChangesLogEvents.php"
 	},
 	"config": {
 	},

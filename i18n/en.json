@@ -34,7 +34,6 @@
 	"majorchanges-log-mode-onlyminor": "Secondary changes only",
 	"majorchanges-log-noresults": "No results",
 	"majorchanges-log-edit-tags": "Mark changes as done",
-	"logentry-majorchanges": "$1 {{GENDER:$2|marked}} revision $4 of $3 as $6"
-
-
+	"logentry-majorchanges": "$1 {{GENDER:$2|marked}} revision $4 of $3 as $6",
+	"apihelp-query+majorchangeslogevents-example-simple": "List recent major changes log events."
 }
