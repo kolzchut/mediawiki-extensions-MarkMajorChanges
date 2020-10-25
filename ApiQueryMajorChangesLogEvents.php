@@ -66,9 +66,6 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		// Set the default limit a bit higher
 		$allowedParams['limit'][ApiBase::PARAM_DFLT] = 25;
 
-		// Change the default direction (newer first)
-		$allowedParams['dir'][ApiBase::PARAM_DFLT] = 'newer';
-
 		// Add a URL property for convenience
 		$allowedParams['prop'][ApiBase::PARAM_DFLT] ='ids|title|type|user|timestamp|comment|details|url';
 		$allowedParams['prop'][ApiBase::PARAM_TYPE][] ='url';
