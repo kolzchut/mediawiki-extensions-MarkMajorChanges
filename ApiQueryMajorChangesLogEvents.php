@@ -40,8 +40,9 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		$rows = $resultData ?: [];
 		foreach ( $rows as &$row ) {
 			if ( is_array( $row ) ) {
-				if ( isset( $row[ 'pageid' ] ) && isset( $prop[ 'url' ] ) ) {
-					$row[ 'url' ] = Title::newFromID( $row[ 'pageid' ] )->getFullURL();
+				if ( isset( $row[ 'pageid' ] ) && !empty( $row[ 'pageid' ] ) && isset( $prop[ 'url' ] ) ) {
+					$title = Title::newFromID( $row[ 'pageid' ] );
+					$row[ 'url' ] = $title ? $title->getFullURL() : '';
 				}
 				unset( $row[ 'type' ], $row[ 'action' ] );
 				$result->addValue( [ 'query', $this->getModuleName() ], null, $row );
