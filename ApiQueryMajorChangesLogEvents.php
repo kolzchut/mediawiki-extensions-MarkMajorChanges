@@ -6,11 +6,6 @@
  * @ingroup API
  */
 
-/*
- * @TODO:
- *  Add option to filter by tags added - arabic/majorchange/all
- * DONE
- */
 class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 
 	public function __construct( ApiQuery $query, $moduleName ) {
@@ -23,6 +18,7 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		$this->getRequest()->setVal( 'leaction', 'tag/update' );
 		$params = $this->extractRequestParams();
 		$this->limitToRelevantTags( $params['mode'] );
+		$this->limitToCategory( $params['category'] );
 
 		parent::execute();
 
@@ -45,6 +41,26 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 			}
 		}
 
+	}
+
+	protected function limitToCategory( $category ) {
+		if ( !$category ) {
+			return;
+		}
+
+		$categoryTitle = Title::makeTitleSafe( NS_CATEGORY, $category );
+		if ( !$categoryTitle ) {
+			$this->dieWithError( 'apierror-invalidcategory' );
+		}
+
+		$this->addTables( 'categorylinks' );
+		$this->addJoinConds( [ 'categorylinks' => [
+			'INNER JOIN',
+			[
+				'cl_to' => $categoryTitle->getDBkey(),
+				'cl_from = log_page',
+			]
+		] ] );
 	}
 
 	protected function limitToRelevantTags( $mode ) {
@@ -86,6 +102,10 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 
 		$allowedParams['mode'] = [
 			ApiBase::PARAM_TYPE => MajorChangesLogPager::getAllowedModes()
+		];
+
+		$allowedParams['category'] = [
+			ApiBase::PARAM_TYPE => 'string'
 		];
 
 		return $allowedParams;
