@@ -17,23 +17,19 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		parent::__construct( $query, $moduleName );
 	}
 
-	private $fld_mode = false;
-
 	public function execute() {
 		// Always force 'tag/update' as the action. This also prevents someone from using this to
 		// bypass the regular log protections
 		$this->getRequest()->setVal( 'leaction', 'tag/update' );
+		$params = $this->extractRequestParams();
+		$this->limitToRelevantTags( $params['mode'] );
 
 		parent::execute();
-
-		$params = $this->extractRequestParams();
-
-		$prop = array_flip( $params['prop'] );
-		// $this->fld_mode = isset( $prop['mode'] );
 
 		// We want to give our consumers URLs right in the results, without further processing
 		// Since we can't override extractRowInfo() we have to iterate over it all
 		// Get the result data, remove it from the ApiResult object, modify it and push it back in
+		$prop = array_flip( $params['prop'] );
 		$result = $this->getResult();
 		$resultData = $this->getResult()->getResultData( [ 'query', $this->getModuleName() ] );
 		$result->reset();
@@ -51,7 +47,24 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 
 	}
 
-	private function extractRowInfo( $row ) {
+	protected function limitToRelevantTags( $mode ) {
+		$mainTag   = MarkMajorChanges::getMainTagName();
+		$secondTag = MarkMajorChanges::getSecondaryTagName();
+		$db = $this->getDB();
+
+		$mainTagLike = $db->buildLike( $db->anyString(), $mainTag, $db->anyString() );
+		$secondTagLike = $db->buildLike( $db->anyString(), $secondTag, $db->anyString() );
+
+		switch ( $mode ) {
+			case 'onlymajor':
+				$this->addWhere( 'log_params ' . $mainTagLike );
+				break;
+			case 'onlyminor':
+				$this->addWhere( 'log_params ' . $secondTagLike );
+				break;
+			default:
+				$this->addWhere( "log_params $mainTagLike OR log_params $secondTagLike" );
+		}
 	}
 
 	public function getAllowedParams( $flags = 0 ) {
@@ -70,6 +83,10 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		// Add a URL property for convenience
 		$allowedParams['prop'][ApiBase::PARAM_DFLT] ='ids|title|type|user|timestamp|comment|details|url';
 		$allowedParams['prop'][ApiBase::PARAM_TYPE][] ='url';
+
+		$allowedParams['mode'] = [
+			ApiBase::PARAM_TYPE => MajorChangesLogPager::getAllowedModes()
+		];
 
 		return $allowedParams;
 	}

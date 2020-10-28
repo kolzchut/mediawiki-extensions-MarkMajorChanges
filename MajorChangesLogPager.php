@@ -63,6 +63,9 @@ class MajorChangesLogPager extends LogPager {
 		return $info;
 	}
 
+	static public function getAllowedModes() {
+		return [ 'onlymajor', 'onlyminor', 'all' ];
+	}
 
 	protected function limitToRelevantTags() {
 		$mainTag   = MarkMajorChanges::getMainTagName();
