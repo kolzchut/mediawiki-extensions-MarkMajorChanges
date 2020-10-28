@@ -37,6 +37,10 @@ then logs it.
 
 ## Changelog
 
+### 0.4.0 [2020-28]
+- Add "lemode" param to API, to limit by tag (onlyminor, onlymajor, all)
+- Add "lecategory" param to API, to limit to a specific category  
+
 ### 0.3.0 [2020-10-23]
 - Add an API query to retrieve the log (based on query/logevents)
 
