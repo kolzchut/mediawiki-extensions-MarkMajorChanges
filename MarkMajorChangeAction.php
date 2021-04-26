@@ -191,7 +191,7 @@ class MajorChangeAction extends FormAction {
 	 * @return array
 	 */
 	private function getPageLankLinks() {
-		$dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
 			'langlinks', [ 'll_lang', 'll_title' ],
 			[ 'll_from' => $this->getTitle()->getArticleID() ], __METHOD__
