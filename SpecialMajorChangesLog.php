@@ -104,6 +104,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 			'page' => [
 				'type' => 'title',
 				'name' => 'page',
+				'required' => false,
 				'label-message' => 'majorchanges-log-title-filter',
 			],
 			'mode' => [
