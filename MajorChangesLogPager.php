@@ -1,5 +1,7 @@
 <?php
 
+use MediaWiki\MediaWikiServices;
+
 /**
  * @ingroup SpecialPage Pager
  */
@@ -25,13 +27,16 @@ class MajorChangesLogPager extends LogPager {
 		$this->endDate   = $opts->getValue( 'end' );
 		$this->mode      = $opts->getValue( 'mode' );
 
+		$this->limitToRelevantTags();
+		$this->limitByDates();
+
 		parent::__construct(
 			$logEventsList,
 			[ 'tag' ],
 			$opts->getValue( 'user' ),
 			$opts->getValue( 'page' ),
 			'',
-			[],
+			$this->mConds,
 			false,
 			false,
 			null
@@ -39,25 +44,23 @@ class MajorChangesLogPager extends LogPager {
 	}
 
 	public function getQueryInfo() {
-		$db = $this->getDatabase();
-		$this->limitToRelevantTags();
-		$this->limitByDates();
-
 		$info = parent::getQueryInfo();
+
+		$tagId = MarkMajorChanges::getIdForTag( 'שינוי מהותי טופל' );
 
 		switch ( $this->status ) {
 			case 'queue':
-				$cond = [ 'ct_tag IS NULL OR ct_tag != ' . $db->addQuotes( 'שינוי מהותי טופל' ) ];
+				$cond = [ 'ct_tag_id IS NULL OR ct_tag_id != ' . $tagId ];
 				break;
 			case 'done':
-				$cond = [ 'ct_tag' => 'שינוי מהותי טופל' ];
+				$cond = [ 'ct_tag_id' => $tagId ];
 				break;
 		}
 
 		if ( isset( $cond ) ) {
 			$info[ 'tables' ][] = 'change_tag';
 			$info[ 'join_conds' ][ 'change_tag' ] = [ 'LEFT OUTER JOIN', 'ct_log_id=log_id' ];
-			$info[ 'conds' ] = array_merge( $info[ 'conds' ], $cond );
+			$info[ 'conds' ] = array_merge_recursive( $info[ 'conds' ], $cond );
 		}
 
 		return $info;
@@ -82,8 +85,10 @@ class MajorChangesLogPager extends LogPager {
 				$tagList = [ $mainTag, $secondTag ];
 		}
 
+		// We might not have a database in the parent yet, so get one
+		$db = $this->getDatabase() ?: wfGetDB( DB_REPLICA );
 		$this->mConds[ 'ls_field' ] = 'Tag';
-		$this->mConds[]  = 'ls_value IN (' . $this->getDatabase()->makeList( $tagList ) . ')';
+		$this->mConds[]  = 'ls_value IN (' . $db->makeList( $tagList ) . ')';
 	}
 
 	protected function limitByDates() {
