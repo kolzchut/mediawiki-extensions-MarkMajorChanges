@@ -156,6 +156,8 @@ class MajorChangeAction extends FormAction {
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
 		$this->getOutput()->wrapWikiMsg( "<div class=\"successbox\">\n$1\n</div>",
 			'tags-edit-success' );
+
+		$this->getOutput()->addReturnTo( $this->getTitle() );
 	}
 
 
