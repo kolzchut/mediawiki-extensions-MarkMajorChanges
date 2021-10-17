@@ -9,6 +9,10 @@ The extension adds a shortcut to the action of adding a
 revision of an article, including logging it.
 It also allows to mark those log lines as "taken care of".
 
+
+## TODO
+- Allow lookup of existing *open* Jira issues... maybe allow filtering by user
+
 ## Usage
 Adds an action to a page to mark as major change. This action is logged. the log can be viewed at
 [[Special:MajorChangesLog]].
@@ -37,9 +41,15 @@ then logs it.
 
 ## Changelog
 
-### 0.4.0 [2020-28]
+### 0.5.0 [2021-10-17]
+- Major: push tickets into Atlassian Jira
+  - Allow specifying an existing Jira issue number to add as subtask to
+  - If no parent jira specified, open as a separate issue.
+- Remove the majorchange/arabic distinction
+
+### 0.4.0 [2020-10-28]
 - Add "lemode" param to API, to limit by tag (onlyminor, onlymajor, all)
-- Add "lecategory" param to API, to limit to a specific category  
+- Add "lecategory" param to API, to limit to a specific category
 
 ### 0.3.0 [2020-10-23]
 - Add an API query to retrieve the log (based on query/logevents)

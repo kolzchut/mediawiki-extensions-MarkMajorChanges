@@ -24,6 +24,13 @@
 		"ApiQueryMajorChangesLogEvents": "ApiQueryMajorChangesLogEvents.php"
 	},
 	"config": {
+		"MarkMajorChangesJiraConf": {
+			"username": null,
+			"password": null,
+			"url": null,
+			"project": null,
+			"shortlinkFormat": null
+		}
 	},
 	"Hooks": {
 		"SkinTemplateNavigation": [

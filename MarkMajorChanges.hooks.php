@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 /**
  * Hooks for MarkMajorChanges extension
  *
@@ -29,10 +32,11 @@ class MarkMajorChangesHooks {
 	public static function addMarkButton( SkinTemplate &$sktemplate, array &$links ) {
 		$title = $sktemplate->getRelevantTitle();
 		$user = $sktemplate->getUser();
+		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
 
-		if ( $user->isAllowedAll( 'changetags', 'markmajorchange' ) ) {
+		if ( $permissionManager->userHasAllRights( $user, 'changetags', 'markmajorchange' ) ) {
 			$urlParams = [
-				'action' => 'markmajorchange',
+				'action' => 'markmajorchange'
 			];
 
 			$links['actions']['markmajorchange'] = [

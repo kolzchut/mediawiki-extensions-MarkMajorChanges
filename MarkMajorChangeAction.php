@@ -1,5 +1,7 @@
 <?php
 
+use MediaWiki\MediaWikiServices;
+
 
 /**
  * Class MajorChangeAction
@@ -9,26 +11,32 @@
  */
 class MajorChangeAction extends FormAction {
 	private $reason;
-	private $isSecondaryChange;
-	private $requiredRight = 'markmajorchange';
 
-	public function getRequiredRight() {
-		return $this->requiredRight;
-	}
-
+	/**
+	 * @throws PermissionsError
+	 * @throws ErrorPageError
+	 */
 	public function show() {
-		// Additional security checking before parent::show()
-		$errors = $this->getTitle()->getUserPermissionsErrors(
-			$this->getRequiredRight(), $this->getUser()
-		);
-		if ( count( $errors ) ) {
-			throw new PermissionsError( $this->getRequiredRight(), $errors );
+		if ( !$this->hasArabicLangLink() ) {
+			throw new ErrorPageError( 'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error' );
 		}
 
 		// Use jQuery.plugin.byteLimit to limit "reason" according to DB column (255B)
 		$this->getOutput()->addModules( 'mediawiki.action.majorchange' );
 
 		parent::show();
+	}
+
+	// Users need both 'markmajorchanges' & 'changetags' permissions, but getRestriction() only
+	// allows to check one permission, so we do another check here
+	protected function checkCanExecute( User $user ) {
+		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		$errors = $permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
+		if ( count( $errors ) ) {
+			throw new PermissionsError( 'changetags', $errors );
+		}
+
+		parent::checkCanExecute( $user );
 	}
 
 	public function getName() {
@@ -46,7 +54,7 @@ class MajorChangeAction extends FormAction {
 	}
 
 	public function getRestriction() {
-		return 'changetags';
+		return 'markmajorchange';
 	}
 
 	protected function preText() {
@@ -55,20 +63,15 @@ class MajorChangeAction extends FormAction {
 
 	protected function getFormFields() {
 		$fields = [];
-		if ( $this->hasArabicLangLink() ) {
-			$fields[ 'isSecondaryChange' ] = [
-				'type'          => 'check',
-				'label-message' => 'markmajorchanges-field-issecondary',
-				// 'cssclass' => 'form-control'
-			];
-		}
+		$fields['jira_issue_id'] = [
+			'type' => 'text',
+			'label-message' => 'markmajorchanges-field-jira-issue'
+		];
 		$fields['reason'] = [
 			'type' => 'textarea',
 			'label-message' => 'markmajorchanges-field-reason',
-			'label' => 'What changed?',
 			'maxlength' => '200',
 			'size' => 60,
-			'cols' => 60,
 			'rows' => 2,
 			'required' => true,
 			// 'cssclass' => 'form-control' // Bootstrap3
@@ -80,8 +83,11 @@ class MajorChangeAction extends FormAction {
 	public function onSubmit( $data ) {
 		// The HTMLForm class takes care of basic validation,
 		// such as required fields not being empty...
-		$this->reason            = $data['reason'];
-		$this->isSecondaryChange = $data['isSecondaryChange'];
+		$this->reason = $data['reason'];
+
+		if( !empty( $data['jira_issue_id'] ) && !$this->jiraIssueExists( $data['jira_issue_id'] ) ) {
+			return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $data['jira_issue_id'] );
+		}
 
 		return true;
 	}
@@ -114,13 +120,11 @@ class MajorChangeAction extends FormAction {
 		$logEntry->setParameters( $logParams );
 		$logEntry->setRelations( [ 'Tag' => $tags ] );
 
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = wfGetDB( DB_PRIMARY );
 		$logId = $logEntry->insert( $dbw );
 
 		// Only send this to UDP, not RC, similar to patrol events
 		$logEntry->publish( $logId, 'udp' );
-		// $logEntry->publish( $logId );
-
 	}
 
 	protected function saveTags() {
@@ -129,20 +133,12 @@ class MajorChangeAction extends FormAction {
 		$reason = $this->reason;
 		$user = $this->getUser();
 
-		$tags = [];
-		// Is this a major change, or just a secondary change? Mark both for major
-		if ( $this->hasArabicLangLink() ) {
-			$tags[] = MarkMajorChanges::getSecondaryTagName();
-		}
-		if ( !$this->isSecondaryChange ) {
-			$tags[] = MarkMajorChanges::getMainTagName();
-		}
+		$tags[] = MarkMajorChanges::getMainTagName();
 
 		// Should we use DeferredUpdates::addCallableUpdate?
 		$status = ChangeTags::addTags( $tags, null, $revId );
 		if ( $status === true ) {
 			$this->logTagAdded( $tags, $revId, $user, $reason );
-			// $this->getTitle()->isMajorChange == true;
 			return true;
 		}
 
@@ -150,37 +146,119 @@ class MajorChangeAction extends FormAction {
 	}
 
 	public function onSuccess() {
+		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+
 		$status = $this->saveTags();
 		// Let the user know
 		// @todo notify user according to actual status...
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
-		$this->getOutput()->wrapWikiMsg( "<div class=\"successbox\">\n$1\n</div>",
-			'tags-edit-success' );
+		$this->getOutput()->addHTML( Html::successBox( $this->msg('tags-edit-success' )->escaped() ) );
+
+		$request = $this->getJiraApiRequestCreateIssue();
+		$status = $request->execute();
+		if ( count( $status->getErrors() ) > 0 ) {
+			$responseContent = json_decode( $request->getContent() );
+			$this->getOutput()->addWikiMsg( 'markmajorchanges-jira-error',
+				json_encode( $this->getResponseContent( $request )->errors )
+			);
+		}
+
+		$this->getOutput()->addReturnTo( $this->getTitle() );
 	}
 
+	private function lookupCurrentUserJiraAccountId() {
+		$email = $this->getOutput()->getUser()->getEmail();
+		$accountId = null;
+		if ( !empty ( $email ) ) {
+			$request = $this->getJiraApiRequest( 'user/search?query=' . $email );
+			$request->execute();
+			$content = $this->getResponseContent( $request );
+			$accountId = $content[0]->accountId;
+		}
 
-
-	protected function alterForm( HTMLForm $form ) {
-		$form->setDisplayFormat( 'div' );
-
-		// Suppress default submit, so we can add one that is slightly nicer looking
-		$form->suppressDefaultSubmit();
-		$form->addButton(
-			'submit',
-			$this->msg( 'htmlform-submit' )->text(),
-			null,
-			[ 'class' => 'btn' ]
-		);
+		return $accountId;
 	}
 
+	private function getResponseContent( $request ) {
+		return json_decode( $request->getContent() );
+	}
+
+	private function getJiraApiRequestCreateIssue() {
+		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields() );
+	}
+
+	private function jiraIssueExists( $issueKey ) {
+		$request = $this->getJiraApiRequest( "issue/$issueKey" );
+		$request->execute();
+		return ( $request->getStatus() < 400 );
+	}
+
+	private function getJiraApiRequest( $urlPath, $postData = [] ) {
+		$request = null;
+		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+		if ( isset( $jiraConf['password'] ) ) {
+			$requestFactory = MediaWikiServices::getInstance()->getHttpRequestFactory();
+			$request = $requestFactory->create( $jiraConf['url'] . '/rest/api/2/' . $urlPath, [
+				'method' => empty( $postData ) ? 'GET' : 'POST',
+				'username' => $jiraConf['username'],
+				'password' => $jiraConf['password'],
+				'postData' => json_encode( $postData )
+			] );
+			$request->setHeader( 'Content-Type', 'application/json' );
+			$request->setHeader( 'Accept', 'application/json' );
+		}
+
+		return $request;
+	}
+
+	private function getJiraCreateIssueFields() {
+		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+
+		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
+		$fields = [
+			'project' => array(
+				'key' => $jiraConf['project'],
+			),
+			'summary' => ($parentIssueId ? 'שינוי מהותי' : 'דרישת עידכון תרגום') . ' עבור: ' . $this->getTitle()->getFullText(),
+			'description' => $this->getRequest()->getText( 'wpreason' ),
+			'issuetype' => [
+				'name' => $parentIssueId ? 'משימת משנה' : 'דרישת עידכון תרגום'
+			],
+			'reporter' => [
+				'accountId' => $this->lookupCurrentUserJiraAccountId()
+			],
+			'customfield_10201' => $this->getTitle()->getFullText(), // "Page Title"
+			'customfield_11689' => $this->getShortUrl(), // customfield_11689 "Link"
+		];
+
+		if ( ExtensionRegistry::getInstance()->isLoaded ( 'ArticleContentArea' ) ) {
+			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea( $this->getTitle() );
+			$fields['customfield_11691'] = $contentArea; // customfield_11691 "content_area"
+		}
+
+		if( !empty( $parentIssueId ) ) {
+			$fields['parent']['key'] = $parentIssueId;
+        }
+
+		return [ 'fields' => $fields ];
+	}
 
 	private function hasArabicLangLink() {
 		$langLinks = $this->getPageLankLinks();
 		return isset( $langLinks['ar'] );
 	}
 
+	/**
+	 * @return string Shortlink
+	 */
+	private function getShortUrl() {
+		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+		$shortlinkFormat = $jiraConf['shortlinkFormat'];
+		$articleId = $this->getTitle()->getArticleID();
+		$lang = $this->getLanguage()->getHtmlCode();
 
-
+		return $shortlinkFormat ? str_replace( [ '$articleId', '$lang' ], [ $articleId, $lang ], $shortlinkFormat ) : null;
+	}
 
 	/**
 	 * Get an array of existing interlanguage links, with the language code in the key and the
@@ -202,6 +280,13 @@ class MajorChangeAction extends FormAction {
 		}
 
 		return $arr;
+	}
+
+	/**
+	 * @return true
+	 */
+	protected function usesOOUI() {
+		return true;
 	}
 
 	// @todo get existing change tags so no one tries to resubmit
