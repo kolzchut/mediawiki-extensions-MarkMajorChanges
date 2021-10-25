@@ -219,10 +219,10 @@ class MajorChangeAction extends FormAction {
 			'project' => array(
 				'key' => $jiraConf['project'],
 			),
-			'summary' => ($parentIssueId ? 'שינוי מהותי' : 'דרישת עידכון תרגום') . ' עבור: ' . $this->getTitle()->getFullText(),
 			'description' => $this->getRequest()->getText( 'wpreason' ),
+			'summary' => $this->getTitle()->getFullText(),
 			'issuetype' => [
-				'name' => $parentIssueId ? 'משימת משנה' : 'דרישת עידכון תרגום'
+				'id' => $parentIssueId ? '10001' : '10009'   // 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
 			],
 			'reporter' => [
 				'accountId' => $this->lookupCurrentUserJiraAccountId()
