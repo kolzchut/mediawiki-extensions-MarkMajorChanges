@@ -68,23 +68,56 @@ class MajorChangeAction extends FormAction {
 			'label-message' => 'markmajorchanges-field-jira-issue'
 		];
 		$fields['reason'] = [
-			'type' => 'textarea',
+			'type' => 'multiselect',
 			'label-message' => 'markmajorchanges-field-reason',
+			'options' => $this->getReasonOptionsArray(),
+		];
+
+		$fields['reason-other'] = [
+			'type' => 'textarea',
+			'label-message' => 'markmajorchanges-field-reason-other',
 			'maxlength' => '200',
 			'size' => 60,
 			'rows' => 2,
-			'required' => true,
-			// 'cssclass' => 'form-control' // Bootstrap3
 		];
 
 		return $fields;
 	}
 
+	private function getReasonOptionsArray(): array {
+		$reasonsArray = [];
+
+		// Add the "other" option
+		// $other = $this->msg( 'markmajorchanges-field-reason-options-other' )->text();
+		// $reasonsArray[ $other ] = $other;
+
+		// Now add the rest from the system message
+		$reasons = explode( "\n", $this->msg( 'markmajorchanges-field-reason-options' )->text() );
+		foreach( $reasons as $value ) {
+			$reasonsArray[ $value ] = $value;
+		}
+
+		return $reasonsArray;
+	}
+
+	/**
+	 * The HTMLForm class takes care of basic validation, such as required fields not being empty...
+	 *
+	 * @param array $data
+	 *
+	 * @return bool|Status
+	 */
 	public function onSubmit( $data ) {
-		// The HTMLForm class takes care of basic validation,
-		// such as required fields not being empty...
+		// Save for later
 		$this->reason = $data['reason'];
 
+		// One of these fields is mandatory
+		if ( empty( $data['reason'] ) &&
+			empty( $data['reason-other'] ) ) {
+			return Status::newFatal( 'markmajorchanges-field-reason-required' );
+		}
+
+		// Check if the reported JIRA issue actually exists
 		if( !empty( $data['jira_issue_id'] ) && !$this->jiraIssueExists( $data['jira_issue_id'] ) ) {
 			return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $data['jira_issue_id'] );
 		}
@@ -215,12 +248,15 @@ class MajorChangeAction extends FormAction {
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
 
 		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
+		$descriptionArray = $this->getRequest()->getArray( 'wpreason' ) ;
+		$descriptionArray[] = $this->getRequest()->getText( 'wpreason-other' );
+
 		$fields = [
 			'project' => array(
 				'key' => $jiraConf['project'],
 			),
-			'description' => $this->getRequest()->getText( 'wpreason' ),
 			'summary' => $this->getTitle()->getFullText(),
+			'description' => implode( "\n", $descriptionArray ),
 			'issuetype' => [
 				'id' => $parentIssueId ? '10001' : '10009'   // 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
 			],

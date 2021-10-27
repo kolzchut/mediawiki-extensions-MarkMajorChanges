@@ -12,16 +12,21 @@ It also allows to mark those log lines as "taken care of".
 
 ## TODO
 - Allow lookup of existing *open* Jira issues... maybe allow filtering by user
+- AJAX form?
 
 ## Usage
 Adds an action to a page to mark as major change. This action is logged. the log can be viewed at
-[[Special:MajorChangesLog]].
+`[[Special:MajorChangesLog]]`.
 
 Also adds an API query, majorchangeslogevents, used this way:
 
 ```api.php?action=query&format=json&prop=info&list=majorchangeslogevents```
 
 It uses the same parameters as ```logevents```, but sets the action as tag/update and adds a URL.
+
+## Configuration
+It is possible to edit `[[MediaWiki:markmajorchanges-field-reason-options]]` to change the list
+of common reasons.
 
 ## Technical
 ChangeTags and SpecialEditTags aren't modular enough, so
@@ -32,15 +37,9 @@ applies the appropriate tag (majorchange/arabic) and
 then logs it.
 
 
-## Todo
-- Better design for the form
-- Show already applied tags on the action screen
-- AJAX form?
-- See about changing MediaWiki core so that a user can apply extension-set tags.
-
-
 ## Changelog
-
+### 0.5.1 [2021-10-27]
+- Add a dropdown field to select common reasons. This will be added to the description field in Jira.
 ### 0.5.0 [2021-10-17]
 - Major: push tickets into Atlassian Jira
   - Allow specifying an existing Jira issue number to add as subtask to
