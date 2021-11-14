@@ -109,11 +109,13 @@ class MajorChangeAction extends FormAction {
 	 */
 	public function onSubmit( $data ) {
 		// Save for later
-		$this->reason = $data['reason'];
+		$this->reason = $this->getRequest()->getArray( 'wpreason' ) ;
+		$this->reason[] = $this->getRequest()->getText( 'wpreason-other' );
+		$this->reason = implode( "\n", $this->reason );
+		$this->reason = trim( $this->reason );
 
-		// One of these fields is mandatory
-		if ( empty( $data['reason'] ) &&
-			empty( $data['reason-other'] ) ) {
+		// Make sure we got a reason from one of the above fields
+		if ( empty( $this->reason )) {
 			return Status::newFatal( 'markmajorchanges-field-reason-required' );
 		}
 
@@ -248,15 +250,13 @@ class MajorChangeAction extends FormAction {
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
 
 		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
-		$descriptionArray = $this->getRequest()->getArray( 'wpreason' ) ;
-		$descriptionArray[] = $this->getRequest()->getText( 'wpreason-other' );
 
 		$fields = [
 			'project' => array(
 				'key' => $jiraConf['project'],
 			),
 			'summary' => $this->getTitle()->getFullText(),
-			'description' => implode( "\n", $descriptionArray ),
+			'description' => $this->reason,
 			'issuetype' => [
 				'id' => $parentIssueId ? '10001' : '10009'   // 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
 			],
