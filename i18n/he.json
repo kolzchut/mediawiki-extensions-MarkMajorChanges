@@ -24,6 +24,7 @@
 	"markmajorchanges-jira-error": "לא ניתן היה ליצור קריאה חדשה בג'ירה. הודעת השגיאה: $1",
 	"markmajorchanges-not-translated-error": "ערך זה אינו מתורגם, ולכן לא ניתן לסמן שינוי מהותי.",
 	"markmajorchanges-jira-parent-issue-doesnt-exist": "קריאה $1 לא קיימת בג'ירה. אנא בדקו שהכנסתם את המספר הנכון.",
+	"markmajorchanges-jira-parent-issue-is-closed": "קריאה $1 סגורה. לא ניתן להוסיף אליה שינויים.",
 	"markmajorchanges-generic-error": "אירעה שגיאה כלשהי. כנראה.",
 	"majorchangeslog": "יומן שינויים מהותיים",
 	"majorchanges-log": "צפיה ביומן שינויים מהותיים",

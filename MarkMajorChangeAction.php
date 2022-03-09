@@ -120,8 +120,13 @@ class MajorChangeAction extends FormAction {
 		}
 
 		// Check if the reported JIRA issue actually exists
-		if( !empty( $data['jira_issue_id'] ) && !$this->jiraIssueExists( $data['jira_issue_id'] ) ) {
-			return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $data['jira_issue_id'] );
+		if( !empty( $data['jira_issue_id'] ) ) {
+			$issueRequest = $this->performJiraIssueRequest( $data['jira_issue_id'] );
+			if ( !$this->jiraIssueExists( $issueRequest ) ) {
+				return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $data['jira_issue_id'] );
+		    } elseif ( !$this->jiraIssueOpen( $issueRequest ) ) {
+				return Status::newFatal( 'markmajorchanges-jira-parent-issue-is-closed', $data['jira_issue_id'] );
+			}
 		}
 
 		return true;
@@ -222,10 +227,38 @@ class MajorChangeAction extends FormAction {
 		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields() );
 	}
 
-	private function jiraIssueExists( $issueKey ) {
+	private function performJiraIssueRequest( $issueKey ) {
 		$request = $this->getJiraApiRequest( "issue/$issueKey" );
 		$request->execute();
-		return ( $request->getStatus() < 400 );
+		return $request;
+	}
+
+
+	/**
+	 * @param int|MWHttpRequest $issueKeyOrRequest
+	 *
+	 * @return bool
+	 */
+	private function jiraIssueExists( $issueKeyOrRequest ) {
+		if( is_int( $issueKeyOrRequest ) ) {
+			$issueKeyOrRequest = $this->performJiraIssueRequest( $issueKeyOrRequest );
+		}
+
+		return ( $issueKeyOrRequest->getStatus() < 400  );
+	}
+
+	/**
+	 * @param int|MWHttpRequest $issueKeyOrRequest
+	 *
+	 * @return bool
+	 */
+	private function jiraIssueOpen( $issueKeyOrRequest ) {
+		if( is_int( $issueKeyOrRequest ) ) {
+			$issueKeyOrRequest = $this->performJiraIssueRequest( $issueKeyOrRequest );
+		}
+
+		$content = $issueKeyOrRequest->getContent();
+		return ( json_decode( $content )->fields->resolution === null  );
 	}
 
 	private function getJiraApiRequest( $urlPath, $postData = [] ) {
