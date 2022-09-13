@@ -115,17 +115,19 @@ class MajorChangeAction extends FormAction {
 		$this->reason = trim( $this->reason );
 
 		// Make sure we got a reason from one of the above fields
-		if ( empty( $this->reason )) {
+		if ( empty( $this->reason ) ) {
 			return Status::newFatal( 'markmajorchanges-field-reason-required' );
 		}
 
 		// Check if the reported JIRA issue actually exists
-		if( !empty( $data['jira_issue_id'] ) ) {
-			$issueRequest = $this->performJiraIssueRequest( $data['jira_issue_id'] );
+		$jiraIssueId = $data['jira_issue_id'];
+		$jiraIssueId = !empty( $jiraIssueId ) ? trim( $jiraIssueId ) : $jiraIssueId;
+		if ( $jiraIssueId ) {
+			$issueRequest = $this->performJiraIssueRequest( $jiraIssueId );
 			if ( !$this->jiraIssueExists( $issueRequest ) ) {
-				return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $data['jira_issue_id'] );
+				return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $jiraIssueId );
 		    } elseif ( !$this->jiraIssueOpen( $issueRequest ) ) {
-				return Status::newFatal( 'markmajorchanges-jira-parent-issue-is-closed', $data['jira_issue_id'] );
+				return Status::newFatal( 'markmajorchanges-jira-parent-issue-is-closed', $jiraIssueId );
 			}
 		}
 
