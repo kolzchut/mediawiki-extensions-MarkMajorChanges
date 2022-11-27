@@ -199,10 +199,7 @@ class MajorChangeAction extends FormAction {
 		$request = $this->getJiraApiRequestCreateIssue();
 		$status = $request->execute();
 		if ( count( $status->getErrors() ) > 0 ) {
-			$responseContent = json_decode( $request->getContent() );
-			$this->getOutput()->addWikiMsg( 'markmajorchanges-jira-error',
-				json_encode( $this->getResponseContent( $request )->errors )
-			);
+			$this->getOutput()->addWikiMsg( 'markmajorchanges-jira-error', $request->getContent() );
 		}
 
 		$this->getOutput()->addReturnTo( $this->getTitle() );
@@ -301,6 +298,11 @@ class MajorChangeAction extends FormAction {
 			'customfield_10201' => $this->getTitle()->getFullText(), // "Page Title"
 			'customfield_11689' => $this->getShortUrl(), // customfield_11689 "Link"
 		];
+
+		// Add categories into a custom labels field
+		$categories = array_keys( $this->getTitle()->getParentCategories() );
+		$categories = str_replace( $this->getLanguage()->getNsText( NS_CATEGORY ) . ':', '', $categories );
+		$fields['customfield_10800'] = $categories;
 
 		if ( ExtensionRegistry::getInstance()->isLoaded ( 'ArticleContentArea' ) ) {
 			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea( $this->getTitle() );
