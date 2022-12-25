@@ -1,23 +1,25 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
-
 /**
  * @ingroup SpecialPage Pager
  */
 class MajorChangesLogPager extends LogPager {
+	/** @var string */
 	private $status;
+	/** @var string */
 	private $mode;
+	/** @var string */
 	private $startDate;
+	/** @var string */
 	private $endDate;
-	protected $mConds;
-
+	/** @var array */
+	protected array $mConds;
 
 	/**
-	 * @param IContextSource $context
+	 * @param LogEventsList $logEventsList
 	 * @param FormOptions $opts
 	 */
-	function __construct( LogEventsList $logEventsList, FormOptions $opts ) {
+	public function __construct( LogEventsList $logEventsList, FormOptions $opts ) {
 		// Override TagLogFormatter. We don't want to override it system-wide, just here
 		global $wgLogActionsHandlers;
 		$wgLogActionsHandlers['tag/update'] = 'MajorChangesTagLogFormatter';
@@ -43,7 +45,8 @@ class MajorChangesLogPager extends LogPager {
 		);
 	}
 
-	public function getQueryInfo() {
+	/** @inheritDoc */
+	public function getQueryInfo(): array {
 		$info = parent::getQueryInfo();
 
 		$tagId = MarkMajorChanges::getIdForTag( 'שינוי מהותי טופל' );
@@ -66,7 +69,10 @@ class MajorChangesLogPager extends LogPager {
 		return $info;
 	}
 
-	static public function getAllowedModes() {
+	/**
+	 * @return string[]
+	 */
+	public static function getAllowedModes() {
 		return [ 'onlymajor', 'onlyminor', 'all' ];
 	}
 
@@ -91,22 +97,27 @@ class MajorChangesLogPager extends LogPager {
 		$this->mConds[]  = 'ls_value IN (' . $db->makeList( $tagList ) . ')';
 	}
 
+	/**
+	 * @throws Exception
+	 */
 	protected function limitByDates() {
 		$dbr = wfGetDB( DB_REPLICA );
 		if ( $this->startDate ) {
 			$this->mConds[] = 'log_timestamp >= ' .
-			           $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );
+					   $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );
 		}
 
 		if ( $this->endDate ) {
 			// Add 1 day, so we check for "any date before tomorrow"
 			$this->mConds[] = 'log_timestamp < ' .
-			           $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->endDate . ' +1 day' ) ) );
+					   $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->endDate . ' +1 day' ) ) );
 		}
 	}
 
-
-	public function getTotalNumRows() {
+	/**
+	 * @return int
+	 */
+	public function getTotalNumRows(): int {
 		$db = $this->getDatabase();
 		$info = $this->getQueryInfo();
 

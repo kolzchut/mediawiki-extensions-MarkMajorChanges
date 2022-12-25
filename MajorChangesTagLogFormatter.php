@@ -34,18 +34,22 @@
 
 class MajorChangesTagLogFormatter extends TagLogFormatter {
 	/**
-	 * prevent user tool links after the user name.
+	 * prevent user tool links after the username.
 	 * @param bool $value
 	 */
 	public function setShowUserToolLinks( $value ) {
 		$this->linkFlood = false;
 	}
 
+	/** @inheritDoc */
 	protected function getMessageKey() {
 		return 'logentry-majorchanges';
 	}
 
-		// This returns '' in the default TagLogFormatter
+	/**
+	 * This returns '' in the default TagLogFormatter
+	 * @inheritDoc
+	 */
 	public function getActionLinks() {
 		$links = parent::getActionLinks();
 

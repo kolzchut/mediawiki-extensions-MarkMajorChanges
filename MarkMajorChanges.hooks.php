@@ -23,12 +23,22 @@ class MarkMajorChangesHooks {
 		return true;
 	}
 
+	/**
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/SkinTemplateNavigation
+	 *
+	 * @param SkinTemplate &$sktemplate The skin template on which the UI is built.
+	 * @param array &$links Navigation links.
+	 */
 	public static function onSkinTemplateNavigation( SkinTemplate &$sktemplate, array &$links ) {
 		self::addMarkButton( $sktemplate, $links );
-
-		return true;
 	}
 
+	/**
+	 * @param SkinTemplate &$sktemplate
+	 * @param array &$links
+	 *
+	 * @return void
+	 */
 	public static function addMarkButton( SkinTemplate &$sktemplate, array &$links ) {
 		$title = $sktemplate->getRelevantTitle();
 		$user = $sktemplate->getUser();
@@ -41,11 +51,8 @@ class MarkMajorChangesHooks {
 
 			$links['actions']['markmajorchange'] = [
 				'text'	=> $sktemplate->msg( 'markmajorchanges-mark-btn' )->text(),
-				'href'	=>  $title->getLocalURL( $urlParams )
+				'href'	=> $title->getLocalURL( $urlParams )
 			];
-		};
-
+		}
 	}
 }
-
-

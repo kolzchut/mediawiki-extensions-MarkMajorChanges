@@ -1,22 +1,34 @@
 <?php
 
-
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Storage\NameTableAccessException;
 
 class MarkMajorChanges {
-	private static $tagname = 'majorchange';
-	private static $secondarytagname = 'arabic';
+	/** @var string */
+	private static string $tagname = 'majorchange';
+	/** @var string */
+	private static string $secondarytagname = 'arabic';
 
+	/**
+	 * @return string
+	 */
 	public static function getMainTagName() {
 		return self::$tagname;
 	}
 
+	/**
+	 * @return string
+	 */
 	public static function getSecondaryTagName() {
 		return self::$secondarytagname;
 	}
 
-	public static function getIdForTag( $tagName ) {
+	/**
+	 * @param string $tagName
+	 *
+	 * @return int|null
+	 */
+	public static function getIdForTag( string $tagName ) {
 		$changeTagDefStore = MediaWikiServices::getInstance()->getChangeTagDefStore();
 		try {
 			return $changeTagDefStore->getId( 'שינוי מהותי טופל' );
@@ -24,8 +36,6 @@ class MarkMajorChanges {
 			// Return nothing.
 			return null;
 		}
-
 	}
 
 }
-

@@ -1,38 +1,30 @@
 <?php
 
 class SpecialMajorChangesLog extends SpecialPage {
-	/**
-	 * @var User
-	 */
-	protected $mUserFilter;
-	/**
-	 * @var Title
-	 */
-	protected $mTitleFilter;
-	protected $mRevTagFilter;
-	protected $mModeFilter;
-	protected $mStartDateFilter;
-	protected $mEndDateFilter;
-	protected $mAllowedModes = [
+	/** @var string[] */
+	protected array $mAllowedModes = [
 		'all',
 		'onlymajor',
 		'onlyminor'
 	];
-	protected $mStatusFilter;
-	protected $mAllowedStatus = [
+	/** @var string[] */
+	protected array $mAllowedStatus = [
 		'all',
 		'done',
 		'queue'
 	];
 
+	/** @inheritDoc */
 	public function __construct() {
 		parent::__construct( 'MajorChangesLog', 'majorchanges-log' );
 	}
 
+	/** @inheritDoc */
 	protected function getGroupName() {
 		return 'changes';
 	}
 
+	/** @inheritDoc */
 	public function execute( $parameter ) {
 		$this->setHeaders();
 		$this->outputHeader();
@@ -54,6 +46,11 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$this->showList( $opts );
 	}
 
+	/**
+	 * @param string $formcontents
+	 *
+	 * @return string
+	 */
 	private function getActionButtons( $formcontents ) {
 		if ( !ChangeTags::showTagEditingUI( $this->getUser() ) ) {
 			# If the user doesn't have the ability to edit tags, don't bother showing them the button(s).
@@ -70,7 +67,6 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$s .= Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() );
 		$s .= Html::hidden( 'wpSubmit', '1' ) . "\n";
 
-
 		$buttons = Html::element(
 			'button',
 			[
@@ -86,15 +82,17 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$legend = Html::element( 'legend', null, $this->msg( 'majorchanges-log-markdone' )->text() );
 		$buttons = Xml::tags( 'fieldset', null, $legend . $buttons );
 
-
 		$s .= $buttons . $formcontents . $buttons;
 		$s .= Html::closeElement( 'form' );
 
 		return $s;
-
 	}
 
-	function searchForm() {
+	/**
+	 * @return void
+	 * @throws MWException
+	 */
+	protected function searchForm() {
 		$formDescriptor = [
 			'user' => [
 				'type' => 'user',
@@ -132,14 +130,17 @@ class SpecialMajorChangesLog extends SpecialPage {
 		];
 
 		HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() )
-		        ->setWrapperLegendMsg( 'majorchanges-log-filter' )
-		        ->setSubmitTextMsg( 'htmlform-submit' )
-			    ->setAction( $this->getPageTitle()->getLocalURL() )
-		        ->setMethod( 'get' )
-		        ->prepareForm()
-		        ->displayForm( false );
+				->setWrapperLegendMsg( 'majorchanges-log-filter' )
+				->setSubmitTextMsg( 'htmlform-submit' )
+				->setAction( $this->getPageTitle()->getLocalURL() )
+				->setMethod( 'get' )
+				->prepareForm()
+				->displayForm( false );
 	}
 
+	/**
+	 * @return array
+	 */
 	protected function getModeFilterOptions() {
 		$options = [];
 
@@ -152,6 +153,9 @@ class SpecialMajorChangesLog extends SpecialPage {
 		return $options;
 	}
 
+	/**
+	 * @return array
+	 */
 	protected function getStatusFilterOptions() {
 		$options = [];
 
@@ -165,63 +169,10 @@ class SpecialMajorChangesLog extends SpecialPage {
 	}
 
 	/**
-	 * Creates the <select> for which tags to show
-	 * @return string Formatted HTML
+	 * @param FormOptions $opts
+	 *
+	 * @return void
 	 */
-	protected function getModeFilter() {
-		$options = [];
-
-		foreach ( $this->mAllowedModes as $mode ) {
-			// majorchanges-log-mode-all, majorchanges-log-mode-onlymajor, majorchanges-log-mode-onlyminor
-			$text = $this->msg( "majorchanges-log-mode-{$mode}" )->escaped();
-
-			$options[] = Html::element(
-				'option', [
-					'value'    => $mode,
-					'selected' => ( $mode === $this->mModeFilter ),
-				],
-				$text
-			);
-		}
-
-		$ret = '';
-		// Wrap options in a <select>
-		$ret .= Html::rawElement(
-			'select',
-			[ 'id' => 'wpModeFilter', 'name' => 'wpModeFilter' ],
-			implode( "\n", $options )
-		);
-
-		return $ret;
-	}
-
-	protected function getStatusFilter() {
-		$options = [];
-
-		foreach ( $this->mAllowedStatus as $status ) {
-			// majorchanges-log-status-all, majorchanges-log-status-done, majorchanges-log-status-queue
-			$text = $this->msg( "majorchanges-log-status-{$status}" )->escaped();
-
-			$options[] = Html::element(
-				'option', [
-				'value'    => $status,
-				'selected' => ( $status === $this->mStatusFilter ),
-			],
-				$text
-			);
-		}
-
-		$ret = '';
-		// Wrap options in a <select>
-		$ret .= Html::rawElement(
-			'select',
-			[ 'id' => 'wpStatusFilter', 'name' => 'wpStatusFilter' ],
-			implode( "\n", $options )
-		);
-
-		return $ret;
-	}
-
 	private function showList( FormOptions $opts ) {
 		$out = $this->getOutput();
 
@@ -239,7 +190,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 		$logBody = $pager->getBody();
 		if ( $logBody ) {
 			$numRecordsMsg = $this->msg( 'majorchanges-log-filter-num-records' )
-			                      ->numParams( $pager->getTotalNumRows() );
+								  ->numParams( $pager->getTotalNumRows() );
 			$out->addHTML(
 				$pager->getNavigationBar() .
 				$this->getActionButtons(

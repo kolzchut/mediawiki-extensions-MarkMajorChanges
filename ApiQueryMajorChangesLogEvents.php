@@ -8,10 +8,12 @@
 
 class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 
+	/** @inheritDoc */
 	public function __construct( ApiQuery $query, $moduleName ) {
 		parent::__construct( $query, $moduleName );
 	}
 
+	/** @inheritDoc */
 	public function execute() {
 		// Always force 'tag/update' as the action. This also prevents someone from using this to
 		// bypass the regular log protections
@@ -40,10 +42,15 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 				$result->addValue( [ 'query', $this->getModuleName() ], null, $row );
 			}
 		}
-
 	}
 
-	protected function limitToCategory( $category ) {
+	/**
+	 * @param string $category
+	 *
+	 * @return void
+	 * @throws ApiUsageException
+	 */
+	protected function limitToCategory( string $category ) {
 		if ( !$category ) {
 			return;
 		}
@@ -63,7 +70,12 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		] ] );
 	}
 
-	protected function limitToRelevantTags( $mode ) {
+	/**
+	 * @param string $mode
+	 *
+	 * @return void
+	 */
+	protected function limitToRelevantTags( string $mode ) {
 		$mainTag   = MarkMajorChanges::getMainTagName();
 		$secondTag = MarkMajorChanges::getSecondaryTagName();
 		$db = $this->getDB();
@@ -83,6 +95,7 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		}
 	}
 
+	/** @inheritDoc */
 	public function getAllowedParams( $flags = 0 ) {
 		// We set some params explicitly, so let's not allow them
 		$allowedParams = parent::getAllowedParams();
@@ -97,8 +110,8 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		$allowedParams['limit'][ApiBase::PARAM_DFLT] = 25;
 
 		// Add a URL property for convenience
-		$allowedParams['prop'][ApiBase::PARAM_DFLT] ='ids|title|type|user|timestamp|comment|details|url';
-		$allowedParams['prop'][ApiBase::PARAM_TYPE][] ='url';
+		$allowedParams['prop'][ApiBase::PARAM_DFLT] = 'ids|title|type|user|timestamp|comment|details|url';
+		$allowedParams['prop'][ApiBase::PARAM_TYPE][] = 'url';
 
 		$allowedParams['mode'] = [
 			ApiBase::PARAM_TYPE => MajorChangesLogPager::getAllowedModes()
@@ -111,6 +124,7 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		return $allowedParams;
 	}
 
+	/** @inheritDoc */
 	protected function getExamplesMessages() {
 		return [
 			'action=query&list=majorchangeslogevents'

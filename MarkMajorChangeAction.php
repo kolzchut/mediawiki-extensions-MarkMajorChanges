@@ -2,7 +2,6 @@
 
 use MediaWiki\MediaWikiServices;
 
-
 /**
  * Class MajorChangeAction
  *
@@ -10,7 +9,8 @@ use MediaWiki\MediaWikiServices;
  * (which otherwise I could have simply extended, drat)
  */
 class MajorChangeAction extends FormAction {
-	private $reason;
+	/** @var ?string */
+	private ?string $reason;
 
 	/**
 	 * @throws PermissionsError
@@ -18,7 +18,9 @@ class MajorChangeAction extends FormAction {
 	 */
 	public function show() {
 		if ( !$this->hasArabicLangLink() ) {
-			throw new ErrorPageError( 'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error' );
+			throw new ErrorPageError(
+				'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error'
+			);
 		}
 
 		// Use jQuery.plugin.byteLimit to limit "reason" according to DB column (255B)
@@ -27,8 +29,17 @@ class MajorChangeAction extends FormAction {
 		parent::show();
 	}
 
-	// Users need both 'markmajorchanges' & 'changetags' permissions, but getRestriction() only
-	// allows to check one permission, so we do another check here
+	/**
+	 * Users need both 'markmajorchanges' & 'changetags' permissions, but getRestriction() only
+	 * allows to check one permission, so we do another check here
+	 *
+	 * @param User $user
+	 *
+	 * @return void
+	 * @throws PermissionsError
+	 * @throws ReadOnlyError
+	 * @throws UserBlockedError
+	 */
 	protected function checkCanExecute( User $user ) {
 		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
 		$errors = $permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
@@ -39,29 +50,37 @@ class MajorChangeAction extends FormAction {
 		parent::checkCanExecute( $user );
 	}
 
-	public function getName() {
+	/** @inheritDoc */
+	public function getName(): string {
 		return 'markmajorchange';
 	}
 
-	// We don't want a subtitle text here
-	protected function getDescription() {
+	/**
+	 * We don't want a subtitle text here
+	 *
+	 * @inheritDoc
+	 */
+	protected function getDescription(): string {
 		return '';
 	}
 
-	protected function getPageTitle() {
-		return
-			$this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() )->text();
+	/** @inheritDoc */
+	protected function getPageTitle(): string {
+		return $this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() )->text();
 	}
 
-	public function getRestriction() {
+	/** @inheritDoc */
+	public function getRestriction(): string {
 		return 'markmajorchange';
 	}
 
-	protected function preText() {
+	/** @inheritDoc */
+	protected function preText(): string {
 		return $this->msg( 'markmajorchange-form-desc' )->text();
 	}
 
-	protected function getFormFields() {
+	/** @inheritDoc */
+	protected function getFormFields(): array {
 		$fields = [];
 		$fields['jira_issue_id'] = [
 			'type' => 'text',
@@ -84,6 +103,9 @@ class MajorChangeAction extends FormAction {
 		return $fields;
 	}
 
+	/**
+	 * @return array
+	 */
 	private function getReasonOptionsArray(): array {
 		$reasonsArray = [];
 
@@ -93,7 +115,7 @@ class MajorChangeAction extends FormAction {
 
 		// Now add the rest from the system message
 		$reasons = explode( "\n", $this->msg( 'markmajorchanges-field-reason-options' )->text() );
-		foreach( $reasons as $value ) {
+		foreach ( $reasons as $value ) {
 			$reasonsArray[ $value ] = $value;
 		}
 
@@ -109,7 +131,7 @@ class MajorChangeAction extends FormAction {
 	 */
 	public function onSubmit( $data ) {
 		// Save for later
-		$this->reason = $this->getRequest()->getArray( 'wpreason' ) ;
+		$this->reason = $this->getRequest()->getArray( 'wpreason' );
 		$this->reason[] = $this->getRequest()->getText( 'wpreason-other' );
 		$this->reason = implode( "\n", $this->reason );
 		$this->reason = trim( $this->reason );
@@ -126,7 +148,7 @@ class MajorChangeAction extends FormAction {
 			$issueRequest = $this->performJiraIssueRequest( $jiraIssueId );
 			if ( !$this->jiraIssueExists( $issueRequest ) ) {
 				return Status::newFatal( 'markmajorchanges-jira-parent-issue-doesnt-exist', $jiraIssueId );
-		    } elseif ( !$this->jiraIssueOpen( $issueRequest ) ) {
+			} elseif ( !$this->jiraIssueOpen( $issueRequest ) ) {
 				return Status::newFatal( 'markmajorchanges-jira-parent-issue-is-closed', $jiraIssueId );
 			}
 		}
@@ -134,16 +156,26 @@ class MajorChangeAction extends FormAction {
 		return true;
 	}
 
-	/* Copied from ChangeTags::updateTagsWithChecks() */
-	protected function logTagAdded( $tags, $revId, $user, $reason ) {
+	/**
+	 * @see Copied from ChangeTags::updateTagsWithChecks()
+	 *
+	 * @param array|null $tags Tags to add to the change
+	 * @param int|null $rev_id The rev_id of the change to add the tags to
+	 * @param User|null $user Tagging user
+	 * @param string $reason Comment for the log
+	 *
+	 * @return void
+	 * @throws MWException
+	 */
+	protected function logTagAdded( ?array $tags, ?int $rev_id, ?User $user, string $reason ) {
 		// log it
 		$logEntry = new ManualLogEntry( 'tag', 'update' );
 		$logEntry->setPerformer( $user );
 		$logEntry->setComment( $reason );
 
 		// find the appropriate target page
-		if ( $revId ) {
-			$rev = Revision::newFromId( $revId );
+		if ( $rev_id ) {
+			$rev = Revision::newFromId( $rev_id );
 			if ( $rev ) {
 				$logEntry->setTarget( $rev->getTitle() );
 			}
@@ -155,7 +187,7 @@ class MajorChangeAction extends FormAction {
 		}
 
 		$logParams = [
-			'4::revid' => $revId,
+			'4::revid' => $rev_id,
 			'6:list:tagsAdded' => $tags,
 			'7:number:tagsAddedCount' => count( $tags ),
 		];
@@ -169,8 +201,11 @@ class MajorChangeAction extends FormAction {
 		$logEntry->publish( $logId, 'udp' );
 	}
 
-	protected function saveTags() {
-
+	/**
+	 * @return bool
+	 * @throws MWException
+	 */
+	protected function saveTags(): bool {
 		$revId = $this->getTitle()->getLatestRevID();
 		$reason = $this->reason;
 		$user = $this->getUser();
@@ -187,14 +222,16 @@ class MajorChangeAction extends FormAction {
 		return false;
 	}
 
+	/**
+	 * @inheritDoc
+	 * @throws MWException
+	 */
 	public function onSuccess() {
-		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
-
-		$status = $this->saveTags();
+		$this->saveTags();
+		// @todo notify user according to actual status returned by $this->saveTags()
 		// Let the user know
-		// @todo notify user according to actual status...
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
-		$this->getOutput()->addHTML( Html::successBox( $this->msg('tags-edit-success' )->escaped() ) );
+		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'tags-edit-success' )->escaped() ) );
 
 		$request = $this->getJiraApiRequestCreateIssue();
 		$status = $request->execute();
@@ -205,10 +242,13 @@ class MajorChangeAction extends FormAction {
 		$this->getOutput()->addReturnTo( $this->getTitle() );
 	}
 
-	private function lookupCurrentUserJiraAccountId() {
+	/**
+	 * @return string|null Jira user's account ID
+	 */
+	private function lookupCurrentUserJiraAccountId(): ?string {
 		$email = $this->getOutput()->getUser()->getEmail();
 		$accountId = null;
-		if ( !empty ( $email ) ) {
+		if ( !empty( $email ) ) {
 			$request = $this->getJiraApiRequest( 'user/search?query=' . $email );
 			$request->execute();
 			$content = $this->getResponseContent( $request );
@@ -218,32 +258,44 @@ class MajorChangeAction extends FormAction {
 		return $accountId;
 	}
 
-	private function getResponseContent( $request ) {
+	/**
+	 * @param MWHttpRequest $request
+	 *
+	 * @return mixed
+	 */
+	private function getResponseContent( MWHttpRequest $request ) {
 		return json_decode( $request->getContent() );
 	}
 
-	private function getJiraApiRequestCreateIssue() {
+	/**
+	 * @return MWHttpRequest|null
+	 */
+	private function getJiraApiRequestCreateIssue(): ?MWHttpRequest {
 		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields() );
 	}
 
-	private function performJiraIssueRequest( $issueKey ) {
+	/**
+	 * @param string $issueKey
+	 *
+	 * @return MWHttpRequest|null
+	 */
+	private function performJiraIssueRequest( string $issueKey ): ?MWHttpRequest {
 		$request = $this->getJiraApiRequest( "issue/$issueKey" );
 		$request->execute();
 		return $request;
 	}
 
-
 	/**
 	 * @param int|MWHttpRequest $issueKeyOrRequest
 	 *
 	 * @return bool
 	 */
-	private function jiraIssueExists( $issueKeyOrRequest ) {
-		if( is_int( $issueKeyOrRequest ) ) {
+	private function jiraIssueExists( $issueKeyOrRequest ): bool {
+		if ( is_int( $issueKeyOrRequest ) ) {
 			$issueKeyOrRequest = $this->performJiraIssueRequest( $issueKeyOrRequest );
 		}
 
-		return ( $issueKeyOrRequest->getStatus() < 400  );
+		return ( $issueKeyOrRequest->getStatus() < 400 );
 	}
 
 	/**
@@ -251,16 +303,22 @@ class MajorChangeAction extends FormAction {
 	 *
 	 * @return bool
 	 */
-	private function jiraIssueOpen( $issueKeyOrRequest ) {
-		if( is_int( $issueKeyOrRequest ) ) {
+	private function jiraIssueOpen( $issueKeyOrRequest ): bool {
+		if ( is_int( $issueKeyOrRequest ) ) {
 			$issueKeyOrRequest = $this->performJiraIssueRequest( $issueKeyOrRequest );
 		}
 
 		$content = $issueKeyOrRequest->getContent();
-		return ( json_decode( $content )->fields->resolution === null  );
+		return ( json_decode( $content )->fields->resolution === null );
 	}
 
-	private function getJiraApiRequest( $urlPath, $postData = [] ) {
+	/**
+	 * @param string $urlPath
+	 * @param array $postData
+	 *
+	 * @return MWHttpRequest
+	 */
+	private function getJiraApiRequest( string $urlPath, array $postData = [] ): ?MWHttpRequest {
 		$request = null;
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
 		if ( isset( $jiraConf['password'] ) ) {
@@ -278,25 +336,31 @@ class MajorChangeAction extends FormAction {
 		return $request;
 	}
 
-	private function getJiraCreateIssueFields() {
+	/**
+	 * @return array[]
+	 */
+	private function getJiraCreateIssueFields(): array {
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
 
 		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
 
 		$fields = [
-			'project' => array(
+			'project' => [
 				'key' => $jiraConf['project'],
-			),
+			],
 			'summary' => $this->getTitle()->getFullText(),
 			'description' => $this->reason,
 			'issuetype' => [
-				'id' => $parentIssueId ? '10001' : '10009'   // 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
+				// 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
+				'id' => $parentIssueId ? '10001' : '10009'
 			],
 			'reporter' => [
 				'accountId' => $this->lookupCurrentUserJiraAccountId()
 			],
-			'customfield_10201' => $this->getTitle()->getFullText(), // "Page Title"
-			'customfield_11689' => $this->getShortUrl(), // customfield_11689 "Link"
+			// customfield_11689 "Page Title"
+			'customfield_10201' => $this->getTitle()->getFullText(),
+			// customfield_11689 "Link"
+			'customfield_11689' => $this->getShortUrl(),
 		];
 
 		// Add categories into a custom labels field
@@ -304,33 +368,40 @@ class MajorChangeAction extends FormAction {
 		$categories = str_replace( $this->getLanguage()->getNsText( NS_CATEGORY ) . ':', '', $categories );
 		$fields['customfield_10800'] = $categories;
 
-		if ( ExtensionRegistry::getInstance()->isLoaded ( 'ArticleContentArea' ) ) {
-			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea( $this->getTitle() );
-			$fields['customfield_11691'] = $contentArea; // customfield_11691 "content_area"
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'ArticleContentArea' ) ) {
+			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea(
+				$this->getTitle()
+			);
+			// customfield_11691 "content_area"
+			$fields['customfield_11691'] = $contentArea;
 		}
 
-		if( !empty( $parentIssueId ) ) {
+		if ( !empty( $parentIssueId ) ) {
 			$fields['parent']['key'] = $parentIssueId;
-        }
+		}
 
 		return [ 'fields' => $fields ];
 	}
 
-	private function hasArabicLangLink() {
+	/**
+	 * @return bool
+	 */
+	private function hasArabicLangLink(): bool {
 		$langLinks = $this->getPageLankLinks();
 		return isset( $langLinks['ar'] );
 	}
 
 	/**
-	 * @return string Shortlink
+	 * @return string a short URL for Jira's tiny URL field
 	 */
-	private function getShortUrl() {
+	private function getShortUrl(): ?string {
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
 		$shortlinkFormat = $jiraConf['shortlinkFormat'];
 		$articleId = $this->getTitle()->getArticleID();
 		$lang = $this->getLanguage()->getHtmlCode();
 
-		return $shortlinkFormat ? str_replace( [ '$articleId', '$lang' ], [ $articleId, $lang ], $shortlinkFormat ) : null;
+		return $shortlinkFormat ?
+			str_replace( [ '$articleId', '$lang' ], [ $articleId, $lang ], $shortlinkFormat ) : null;
 	}
 
 	/**
@@ -341,7 +412,7 @@ class MajorChangeAction extends FormAction {
 	 *
 	 * @return array
 	 */
-	private function getPageLankLinks() {
+	private function getPageLankLinks(): array {
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
 			'langlinks', [ 'll_lang', 'll_title' ],
@@ -358,16 +429,15 @@ class MajorChangeAction extends FormAction {
 	/**
 	 * @return true
 	 */
-	protected function usesOOUI() {
+	protected function usesOOUI(): bool {
 		return true;
 	}
 
 	// @todo get existing change tags so no one tries to resubmit
+	/*
 	private function getExistingChangeTags() {
 		// $tags = Revision::
 	}
-
-
+	*/
 
 }
-

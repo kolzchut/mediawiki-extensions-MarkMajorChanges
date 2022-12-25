@@ -16,4 +16,3 @@ $specialPageAliases['he'] = [
 $specialPageAliases['ar'] = [
 	// 'MajorChangesLog' => [],
 ];
-
