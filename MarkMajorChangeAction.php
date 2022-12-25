@@ -361,12 +361,9 @@ class MajorChangeAction extends FormAction {
 			'customfield_10201' => $this->getTitle()->getFullText(),
 			// customfield_11689 "Link"
 			'customfield_11689' => $this->getShortUrl(),
+			// customfield_10800 "WikiPage Categories"
+			'customfield_10800' => $this->getPageCategories()
 		];
-
-		// Add categories into a custom labels field
-		$categories = array_keys( $this->getTitle()->getParentCategories() );
-		$categories = str_replace( $this->getLanguage()->getNsText( NS_CATEGORY ) . ':', '', $categories );
-		$fields['customfield_10800'] = $categories;
 
 		if ( ExtensionRegistry::getInstance()->isLoaded( 'ArticleContentArea' ) ) {
 			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea(
@@ -402,6 +399,16 @@ class MajorChangeAction extends FormAction {
 
 		return $shortlinkFormat ?
 			str_replace( [ '$articleId', '$lang' ], [ $articleId, $lang ], $shortlinkFormat ) : null;
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getPageCategories(): array {
+		$categories = array_keys( $this->getTitle()->getParentCategories() );
+		$categories = str_replace( $this->getLanguage()->getNsText( NS_CATEGORY ) . ':', '', $categories );
+
+		return $categories;
 	}
 
 	/**
