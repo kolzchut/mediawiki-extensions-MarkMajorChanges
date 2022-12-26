@@ -362,7 +362,8 @@ class MajorChangeAction extends FormAction {
 			// customfield_11689 "Link"
 			'customfield_11689' => $this->getShortUrl(),
 			// customfield_10800 "WikiPage Categories"
-			'customfield_10800' => $this->getPageCategories()
+			'customfield_10800' => $this->getPageCategories(),
+			'customfield_11710' => $this->getBenefitsEngineId()
 		];
 
 		if ( ExtensionRegistry::getInstance()->isLoaded( 'ArticleContentArea' ) ) {
@@ -431,6 +432,30 @@ class MajorChangeAction extends FormAction {
 		}
 
 		return $arr;
+	}
+
+	/**
+	 * Get the Government Benefit Engine ID saved by Extension:Cargo on the wiki
+	 *
+	 * @return null|string
+	 */
+	private function getBenefitsEngineId() {
+		if ( !ExtensionRegistry::getInstance()->isLoaded( 'Cargo' ) ) {
+			return null;
+		}
+		try {
+			$cargoQuery = CargoSQLQuery::newFromValues(
+				'page_metadata',
+				'benefits_engine_id=id',
+				'_pageID = ' . $this->getTitle()->getArticleID(),
+				null, null, null, null, '1', null
+			);
+			$result = $cargoQuery->run();
+			return empty( $result ) ? null : $result[0]['id'];
+		} catch ( MWException $e ) {
+			\MWExceptionHandler::logException( $e );
+			return null;
+		}
 	}
 
 	/**
