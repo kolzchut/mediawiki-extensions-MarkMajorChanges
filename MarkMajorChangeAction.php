@@ -9,8 +9,8 @@ use MediaWiki\MediaWikiServices;
  * (which otherwise I could have simply extended, drat)
  */
 class MajorChangeAction extends FormAction {
-	/** @var ?string */
-	private ?string $reason;
+	/** @var string|array|null */
+	private $reason;
 
 	/**
 	 * @throws PermissionsError
