@@ -11,13 +11,15 @@ use MediaWiki\MediaWikiServices;
 class MajorChangeAction extends FormAction {
 	/** @var string|array|null */
 	private $reason;
+	/** @var array|null */
+	private ?array $langLinks;
 
 	/**
 	 * @throws PermissionsError
 	 * @throws ErrorPageError
 	 */
 	public function show() {
-		if ( !$this->hasArabicLangLink() ) {
+		if ( !$this->hasLangLinks() ) {
 			throw new ErrorPageError(
 				'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error'
 			);
@@ -337,11 +339,32 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/**
+	 * @return array
+	 */
+	private function getTranslationLanguagesForJira() {
+		$langLinks = $this->getPageLankLinks();
+		// To update a multi-select field by value and not id, we have to pass an
+		// object with specific 'value' => $value
+		$translations = [];
+		foreach ( $this->getPageLankLinks() as $key => $val ) {
+			$translations[] = [ 'value' => $key ];
+		}
+
+		return $translations;
+	}
+
+	private function getCurrentContentLanguageName() {
+		$languageNameUtils = MediaWikiServices::getInstance()->getLanguageNameUtils();
+		$contentLanguage = MediaWikiServices::getInstance()->getContentLanguage();
+
+		return $languageNameUtils->getLanguageName( $contentLanguage->getCode(), 'en' );
+	}
+
+	/**
 	 * @return array[]
 	 */
 	private function getJiraCreateIssueFields(): array {
 		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
-
 		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
 
 		$fields = [
@@ -357,12 +380,16 @@ class MajorChangeAction extends FormAction {
 			'reporter' => [
 				'accountId' => $this->lookupCurrentUserJiraAccountId()
 			],
+			// customfield_10305 "Language"
+			'customfield_10305' => [ 'value' => $this->getCurrentContentLanguageName() ],
 			// customfield_11689 "Page Title"
 			'customfield_10201' => $this->getTitle()->getFullText(),
 			// customfield_11689 "Link"
 			'customfield_11689' => $this->getShortUrl(),
 			// customfield_10800 "WikiPage Categories"
 			'customfield_10800' => $this->getPageCategories(),
+			// customfield_11711 'article_translated_to'
+			'customfield_11711' => $this->getTranslationLanguagesForJira(),
 			'customfield_11710' => $this->getBenefitsEngineId()
 		];
 
@@ -384,9 +411,8 @@ class MajorChangeAction extends FormAction {
 	/**
 	 * @return bool
 	 */
-	private function hasArabicLangLink(): bool {
-		$langLinks = $this->getPageLankLinks();
-		return isset( $langLinks['ar'] );
+	private function hasLangLinks(): bool {
+		return !empty( $this->getPageLankLinks() );
 	}
 
 	/**
@@ -421,6 +447,10 @@ class MajorChangeAction extends FormAction {
 	 * @return array
 	 */
 	private function getPageLankLinks(): array {
+		if ( isset( $this->langLinks ) ) {
+			return $this->langLinks;
+		}
+
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
 			'langlinks', [ 'll_lang', 'll_title' ],
@@ -431,6 +461,7 @@ class MajorChangeAction extends FormAction {
 			$arr[$row->ll_lang] = $row->ll_title;
 		}
 
+		$this->langLinks = $arr;
 		return $arr;
 	}
 
