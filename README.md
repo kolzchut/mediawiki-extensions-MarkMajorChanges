@@ -40,7 +40,7 @@ This extension shows an action form (FormAction) that applies the appropriate ta
 
 ## Changelog
 ### 0.6.0 [2024-12-24]
-- Multi-lingual support: create a jira issue for each language link in the page
+- Multilingual support: create a jira issue for each language link in the page
 ### 0.5.1 [2021-10-27]
 - Add a dropdown field to select common reasons. This will be added to the description field in Jira.
 ### 0.5.0 [2021-10-17]

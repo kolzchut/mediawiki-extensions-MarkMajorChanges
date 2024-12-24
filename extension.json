@@ -31,10 +31,7 @@
 			"project": null,
 			"shortlinkFormat": null
 		},
-		"MarkMajorChangesLanguages": {
-			"value": ["ar", "ru"],
-			"description": "List of language codes for which Jira issues should be created"
-		}
+		"MarkMajorChangesLanguages": ["ar", "ru"]
 	},
 	"Hooks": {
 		"SkinTemplateNavigation": [
