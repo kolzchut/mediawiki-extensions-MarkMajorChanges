@@ -25,19 +25,22 @@ Also adds an API query, majorchangeslogevents, used this way:
 It uses the same parameters as ```logevents```, but sets the action as tag/update and adds a URL.
 
 ## Configuration
-It is possible to edit `[[MediaWiki:markmajorchanges-field-reason-options]]` to change the list
+1. `$wgMarkMajorChangesLanguages` - the languages for which major changes will be created in Jira.
+2. `$wgMarkMajorChangesJiraConf` - the configuration for the Jira API. See `extension.json` for details.
+3. It is possible to edit `[[MediaWiki:markmajorchanges-field-reason-options]]` to change the list
 of common reasons.
 
+
+
 ## Technical
-ChangeTags and SpecialEditTags aren't modular enough, so
-I was forced to rip parts of each to use here (such as
+ChangeTags and SpecialEditTags aren't modular enough, so I was forced to rip parts of each to use here (such as
 the logging action).
-This extension shows an action form (FormAction) that
-applies the appropriate tag (majorchange/arabic) and
-then logs it.
+This extension shows an action form (FormAction) that applies the appropriate tag (majorchange/arabic) and then logs it.
 
 
 ## Changelog
+### 0.6.0 [2024-12-24]
+- Multi-lingual support: create a jira issue for each language link in the page
 ### 0.5.1 [2021-10-27]
 - Add a dropdown field to select common reasons. This will be added to the description field in Jira.
 ### 0.5.0 [2021-10-17]

@@ -9,76 +9,132 @@ use MediaWiki\MediaWikiServices;
  * (which otherwise I could have simply extended, drat)
  */
 class MajorChangeAction extends FormAction {
+	/** @var array Mapping of Jira custom field names to their IDs */
+	private const FIELD_IDS = [
+		'LANGUAGE' => 'customfield_10305',
+		'PAGE_TITLE' => 'customfield_10201',
+		'LINK' => 'customfield_11689',
+		'WIKI_CATEGORIES' => 'customfield_10800',
+		'ARTICLE_TRANSLATED_TO' => 'customfield_11711',
+		'BENEFITS_ENGINE_ID' => 'customfield_11710',
+		'CONTENT_AREA' => 'customfield_11691'
+	];
+
+	// Constants for issue types
+	/** Issue type ID for standalone major change issues (used when no parent ID is provided) */
+	private const ISSUE_TYPE_MAJOR_CHANGE = '10009';
+
+	/** Issue type ID for subtasks (used when a parent ID is provided) */
+	private const ISSUE_TYPE_SUBTASK = '10001';
+
 	/** @var string|array|null */
 	private $reason;
 	/** @var array|null */
 	private ?array $langLinks;
 
 	/**
-	 * @throws PermissionsError
-	 * @throws ErrorPageError
+	 * Creates Jira issue(s) based on whether a parent issue ID is provided
+	 *
+	 * If a parent ID is provided:
+	 *   - Creates a single subtask under that parent using wiki's content language
+	 * If no parent ID is provided:
+	 *   - Creates standalone major change issues for each language link
+	 *
+	 * @param string|null $parentIssueId Parent issue ID if creating a subtask
+	 * @return array Array of created issue keys or error messages, keyed by language code
 	 */
-	public function show() {
-		if ( !$this->hasLangLinks() ) {
-			throw new ErrorPageError(
-				'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error'
+	private function createJiraIssues( ?string $parentIssueId ): array {
+		$results = [];
+
+		if ( $parentIssueId ) {
+			// Create a subtask under the specified parent issue using content language
+			$langCode = MediaWikiServices::getInstance()->getContentLanguage()->getCode();
+			$request = $this->getJiraApiRequestCreateIssue( $parentIssueId, $langCode );
+			$status = $request->execute();
+			$results[$langCode] = $this->handleJiraResponse( $status, $request );
+		} else {
+			// Create standalone major change issues for each allowed language
+			$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
+			foreach ( $this->getPageLankLinks() as $langCode => $title ) {
+				if ( in_array( $langCode, $allowedLanguages ) ) {
+					$request = $this->getJiraApiRequestCreateIssue( null, $langCode );
+					$status = $request->execute();
+					$results[$langCode] = $this->handleJiraResponse( $status, $request );
+				}
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * @param Status $status
+	 * @param MWHttpRequest $request
+	 * @return array
+	 */
+	private function handleJiraResponse( $status, $request ): array {
+		if ( count( $status->getErrors() ) > 0 ) {
+			return [
+				'status' => 'error',
+				'message' => $request->getContent()
+			];
+		}
+		return [
+			'status' => 'success',
+			'key' => json_decode( $request->getContent() )->key
+		];
+	}
+
+	/**
+	 * Creates the fields for a Jira issue
+	 *
+	 * @param string|null $parentIssueId If provided, creates a subtask linked to this parent
+	 * @param string|null $langCode Language code for setting the language field
+	 * @return array Jira issue fields
+	 */
+	private function getJiraCreateIssueFields( ?string $parentIssueId = null, ?string $langCode = null ): array {
+		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+
+		$fields = [
+			'project' => [
+				'key' => $jiraConf['project'],
+			],
+			'summary' => $this->getTitle()->getFullText(),
+			'description' => $this->reason,
+			'issuetype' => [
+				'id' => $parentIssueId ? self::ISSUE_TYPE_SUBTASK : self::ISSUE_TYPE_MAJOR_CHANGE
+			],
+			'reporter' => [
+				'id' => $this->lookupCurrentUserJiraAccountId()
+			],
+			self::FIELD_IDS['PAGE_TITLE'] => $this->getTitle()->getFullText(),
+			self::FIELD_IDS['LINK'] => $this->getShortUrl(),
+			self::FIELD_IDS['WIKI_CATEGORIES'] => $this->getPageCategories(),
+			self::FIELD_IDS['ARTICLE_TRANSLATED_TO'] => $this->getTranslationLanguagesForJira(),
+			self::FIELD_IDS['BENEFITS_ENGINE_ID'] => $this->getBenefitsEngineId()
+		];
+
+		// Set language field based on language code
+		if ( $langCode ) {
+			$languageNameUtils = MediaWikiServices::getInstance()->getLanguageNameUtils();
+			$languageName = $languageNameUtils->getLanguageName( $langCode, 'en' );
+			if ( $languageName ) {
+				$fields[self::FIELD_IDS['LANGUAGE']] = [ 'value' => $languageName ];
+			}
+		}
+
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'ArticleContentArea' ) ) {
+			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea(
+				$this->getTitle()
 			);
+			$fields[self::FIELD_IDS['CONTENT_AREA']] = $contentArea;
 		}
 
-		// Use jQuery.plugin.byteLimit to limit "reason" according to DB column (255B)
-		$this->getOutput()->addModules( 'mediawiki.action.majorchange' );
-
-		parent::show();
-	}
-
-	/**
-	 * Users need both 'markmajorchanges' & 'changetags' permissions, but getRestriction() only
-	 * allows to check one permission, so we do another check here
-	 *
-	 * @param User $user
-	 *
-	 * @return void
-	 * @throws PermissionsError
-	 * @throws ReadOnlyError
-	 * @throws UserBlockedError
-	 */
-	protected function checkCanExecute( User $user ) {
-		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
-		$errors = $permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
-		if ( count( $errors ) ) {
-			throw new PermissionsError( 'changetags', $errors );
+		if ( $parentIssueId ) {
+			$fields['parent']['key'] = $parentIssueId;
 		}
 
-		parent::checkCanExecute( $user );
-	}
-
-	/** @inheritDoc */
-	public function getName(): string {
-		return 'markmajorchange';
-	}
-
-	/**
-	 * We don't want a subtitle text here
-	 *
-	 * @inheritDoc
-	 */
-	protected function getDescription(): string {
-		return '';
-	}
-
-	/** @inheritDoc */
-	protected function getPageTitle(): string {
-		return $this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() )->text();
-	}
-
-	/** @inheritDoc */
-	public function getRestriction(): string {
-		return 'markmajorchange';
-	}
-
-	/** @inheritDoc */
-	protected function preText(): string {
-		return $this->msg( 'markmajorchange-form-desc' )->text();
+		return [ 'fields' => $fields ];
 	}
 
 	/** @inheritDoc */
@@ -159,69 +215,41 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/**
-	 * @see Copied from ChangeTags::updateTagsWithChecks()
-	 *
-	 * @param array|null $tags Tags to add to the change
-	 * @param int|null $rev_id The rev_id of the change to add the tags to
-	 * @param User|null $user Tagging user
-	 * @param string $reason Comment for the log
-	 *
-	 * @return void
-	 * @throws MWException
+	 * @throws PermissionsError
+	 * @throws ErrorPageError
 	 */
-	protected function logTagAdded( ?array $tags, ?int $rev_id, ?User $user, string $reason ) {
-		// log it
-		$logEntry = new ManualLogEntry( 'tag', 'update' );
-		$logEntry->setPerformer( $user );
-		$logEntry->setComment( $reason );
-
-		// find the appropriate target page
-		if ( $rev_id ) {
-			$rev = Revision::newFromId( $rev_id );
-			if ( $rev ) {
-				$logEntry->setTarget( $rev->getTitle() );
-			}
+	public function show() {
+		if ( !$this->hasLangLinks() ) {
+			throw new ErrorPageError(
+				'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error'
+			);
 		}
 
-		if ( !$logEntry->getTarget() ) {
-			// target is required, so we have to set something
-			$logEntry->setTarget( SpecialPage::getTitleFor( 'Tags' ) );
-		}
+		// Use jQuery.plugin.byteLimit to limit "reason" according to DB column (255B)
+		$this->getOutput()->addModules( 'mediawiki.action.majorchange' );
 
-		$logParams = [
-			'4::revid' => $rev_id,
-			'6:list:tagsAdded' => $tags,
-			'7:number:tagsAddedCount' => count( $tags ),
-		];
-		$logEntry->setParameters( $logParams );
-		$logEntry->setRelations( [ 'Tag' => $tags ] );
-
-		$dbw = wfGetDB( DB_PRIMARY );
-		$logId = $logEntry->insert( $dbw );
-
-		// Only send this to UDP, not RC, similar to patrol events
-		$logEntry->publish( $logId, 'udp' );
+		parent::show();
 	}
 
 	/**
-	 * @return bool
-	 * @throws MWException
+	 * Users need both 'markmajorchanges' & 'changetags' permissions, but getRestriction() only
+	 * allows to check one permission, so we do another check here
+	 *
+	 * @param User $user
+	 *
+	 * @return void
+	 * @throws PermissionsError
+	 * @throws ReadOnlyError
+	 * @throws UserBlockedError
 	 */
-	protected function saveTags(): bool {
-		$revId = $this->getTitle()->getLatestRevID();
-		$reason = $this->reason;
-		$user = $this->getUser();
-
-		$tags[] = MarkMajorChanges::getMainTagName();
-
-		// Should we use DeferredUpdates::addCallableUpdate?
-		$status = ChangeTags::addTags( $tags, null, $revId );
-		if ( $status === true ) {
-			$this->logTagAdded( $tags, $revId, $user, $reason );
-			return true;
+	protected function checkCanExecute( User $user ) {
+		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		$errors = $permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
+		if ( count( $errors ) ) {
+			throw new PermissionsError( 'changetags', $errors );
 		}
 
-		return false;
+		parent::checkCanExecute( $user );
 	}
 
 	/**
@@ -231,33 +259,24 @@ class MajorChangeAction extends FormAction {
 	public function onSuccess() {
 		$this->saveTags();
 		// @todo notify user according to actual status returned by $this->saveTags()
-		// Let the user know
 		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'tags-edit-success' )->escaped() ) );
 
-		$request = $this->getJiraApiRequestCreateIssue();
-		$status = $request->execute();
-		if ( count( $status->getErrors() ) > 0 ) {
-			$this->getOutput()->addWikiMsg( 'markmajorchanges-jira-error', $request->getContent() );
+		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
+		$results = $this->createJiraIssues( $parentIssueId );
+
+		// Show error messages for any failed issues
+		foreach ( $results as $langCode => $result ) {
+			if ( $result['status'] === 'error' ) {
+				$this->getOutput()->addWikiMsg(
+					'markmajorchanges-jira-error',
+					$result['message'],
+					$langCode
+				);
+			}
 		}
 
 		$this->getOutput()->addReturnTo( $this->getTitle() );
-	}
-
-	/**
-	 * @return string|null Jira user's account ID
-	 */
-	private function lookupCurrentUserJiraAccountId(): ?string {
-		$email = $this->getOutput()->getUser()->getEmail();
-		$accountId = null;
-		if ( !empty( $email ) ) {
-			$request = $this->getJiraApiRequest( 'user/search?query=' . $email );
-			$request->execute();
-			$content = $this->getResponseContent( $request );
-			$accountId = $content[0]->accountId;
-		}
-
-		return $accountId;
 	}
 
 	/**
@@ -270,10 +289,15 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/**
+	 * Creates a request object for creating a Jira issue
+	 *
+	 * @param string|null $parentIssueId If provided, creates a subtask linked to this parent
+	 * @param string|null $langCode Language code for setting the language field
 	 * @return MWHttpRequest|null
 	 */
-	private function getJiraApiRequestCreateIssue(): ?MWHttpRequest {
-		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields() );
+	private function getJiraApiRequestCreateIssue(
+		?string $parentIssueId = null, ?string $langCode = null ): ?MWHttpRequest {
+		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields( $parentIssueId, $langCode ) );
 	}
 
 	/**
@@ -341,8 +365,7 @@ class MajorChangeAction extends FormAction {
 	/**
 	 * @return array
 	 */
-	private function getTranslationLanguagesForJira() {
-		$langLinks = $this->getPageLankLinks();
+	private function getTranslationLanguagesForJira(): array {
 		// To update a multi-select field by value and not id, we have to pass an
 		// object with specific 'value' => $value
 		$translations = [];
@@ -353,7 +376,10 @@ class MajorChangeAction extends FormAction {
 		return $translations;
 	}
 
-	private function getCurrentContentLanguageName() {
+	/**
+	 * @return string
+	 */
+	private function getCurrentContentLanguageName(): string {
 		$languageNameUtils = MediaWikiServices::getInstance()->getLanguageNameUtils();
 		$contentLanguage = MediaWikiServices::getInstance()->getContentLanguage();
 
@@ -361,51 +387,19 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/**
-	 * @return array[]
+	 * @return string|null Jira user's account ID
 	 */
-	private function getJiraCreateIssueFields(): array {
-		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
-		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
-
-		$fields = [
-			'project' => [
-				'key' => $jiraConf['project'],
-			],
-			'summary' => $this->getTitle()->getFullText(),
-			'description' => $this->reason,
-			'issuetype' => [
-				// 10009 => 'שינוי מהותי', 10001 => 'משימת משנה'
-				'id' => $parentIssueId ? '10001' : '10009'
-			],
-			'reporter' => [
-				'accountId' => $this->lookupCurrentUserJiraAccountId()
-			],
-			// customfield_10305 "Language"
-			'customfield_10305' => [ 'value' => $this->getCurrentContentLanguageName() ],
-			// customfield_11689 "Page Title"
-			'customfield_10201' => $this->getTitle()->getFullText(),
-			// customfield_11689 "Link"
-			'customfield_11689' => $this->getShortUrl(),
-			// customfield_10800 "WikiPage Categories"
-			'customfield_10800' => $this->getPageCategories(),
-			// customfield_11711 'article_translated_to'
-			'customfield_11711' => $this->getTranslationLanguagesForJira(),
-			'customfield_11710' => $this->getBenefitsEngineId()
-		];
-
-		if ( ExtensionRegistry::getInstance()->isLoaded( 'ArticleContentArea' ) ) {
-			$contentArea = \MediaWiki\Extension\ArticleContentArea\ArticleContentArea::getArticleContentArea(
-				$this->getTitle()
-			);
-			// customfield_11691 "content_area"
-			$fields['customfield_11691'] = $contentArea;
+	private function lookupCurrentUserJiraAccountId(): ?string {
+		$email = $this->getOutput()->getUser()->getEmail();
+		$accountId = null;
+		if ( !empty( $email ) ) {
+			$request = $this->getJiraApiRequest( 'user/search?query=' . $email );
+			$request->execute();
+			$content = $this->getResponseContent( $request );
+			$accountId = $content[0]->accountId;
 		}
 
-		if ( !empty( $parentIssueId ) ) {
-			$fields['parent']['key'] = $parentIssueId;
-		}
-
-		return [ 'fields' => $fields ];
+		return $accountId;
 	}
 
 	/**
@@ -487,6 +481,101 @@ class MajorChangeAction extends FormAction {
 			\MWExceptionHandler::logException( $e );
 			return null;
 		}
+	}
+
+	/**
+	 * @see Copied from ChangeTags::updateTagsWithChecks()
+	 *
+	 * @param array|null $tags Tags to add to the change
+	 * @param int|null $rev_id The rev_id of the change to add the tags to
+	 * @param User|null $user Tagging user
+	 * @param string $reason Comment for the log
+	 *
+	 * @return void
+	 * @throws MWException
+	 */
+	protected function logTagAdded( ?array $tags, ?int $rev_id, ?User $user, string $reason ) {
+		// log it
+		$logEntry = new ManualLogEntry( 'tag', 'update' );
+		$logEntry->setPerformer( $user );
+		$logEntry->setComment( $reason );
+
+		// find the appropriate target page
+		if ( $rev_id ) {
+			$rev = Revision::newFromId( $rev_id );
+			if ( $rev ) {
+				$logEntry->setTarget( $rev->getTitle() );
+			}
+		}
+
+		if ( !$logEntry->getTarget() ) {
+			// target is required, so we have to set something
+			$logEntry->setTarget( SpecialPage::getTitleFor( 'Tags' ) );
+		}
+
+		$logParams = [
+			'4::revid' => $rev_id,
+			'6:list:tagsAdded' => $tags,
+			'7:number:tagsAddedCount' => count( $tags ),
+		];
+		$logEntry->setParameters( $logParams );
+		$logEntry->setRelations( [ 'Tag' => $tags ] );
+
+		$dbw = wfGetDB( DB_PRIMARY );
+		$logId = $logEntry->insert( $dbw );
+
+		// Only send this to UDP, not RC, similar to patrol events
+		$logEntry->publish( $logId, 'udp' );
+	}
+
+	/**
+	 * @return bool
+	 * @throws MWException
+	 */
+	protected function saveTags(): bool {
+		$revId = $this->getTitle()->getLatestRevID();
+		$reason = $this->reason;
+		$user = $this->getUser();
+
+		$tags[] = MarkMajorChanges::getMainTagName();
+
+		// Should we use DeferredUpdates::addCallableUpdate?
+		$status = ChangeTags::addTags( $tags, null, $revId );
+		if ( $status === true ) {
+			$this->logTagAdded( $tags, $revId, $user, $reason );
+			return true;
+		}
+
+		return false;
+	}
+
+	/** @inheritDoc */
+	public function getName(): string {
+		return 'markmajorchange';
+	}
+
+	/**
+	 * We don't want a subtitle text here
+	 *
+	 * @inheritDoc
+	 */
+	protected function getDescription(): string {
+		return '';
+	}
+
+	/** @inheritDoc */
+	protected function getPageTitle(): string {
+		return $this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() )->text();
+	}
+
+	/** @inheritDoc */
+	public function getRestriction(): string {
+		return 'markmajorchange';
+	}
+
+	/** @inheritDoc */
+	protected function preText(): string {
+		return $this->msg( 'markmajorchange-form-desc' )->text();
 	}
 
 	/**
