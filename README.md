@@ -4,11 +4,8 @@ MarkMajorChanges extension for MediaWiki
 NOTE: this is a custom extension for Kol-Zchut (kolzchut.org.il).
       It was not designed with public use in mind.
 
-The extension adds a shortcut to the action of adding a
-"major change" or "arabic" revision tag to the latest
-revision of an article, including logging it.
-It also allows to mark those log lines as "taken care of".
-
+The extension creates Jira tickets for manually specified "major" changes in wiki pages, to allow our translation team to track them.
+It also creates a tag for the change, which can be used to filter the log.
 
 ## TODO
 - Allow lookup of existing *open* Jira issues... maybe allow filtering by user
@@ -27,18 +24,20 @@ It uses the same parameters as ```logevents```, but sets the action as tag/updat
 ## Configuration
 1. `$wgMarkMajorChangesLanguages` - the languages for which major changes will be created in Jira.
 2. `$wgMarkMajorChangesJiraConf` - the configuration for the Jira API. See `extension.json` for details.
-3. It is possible to edit `[[MediaWiki:markmajorchanges-field-reason-options]]` to change the list
-of common reasons.
-
-
+3. `$wgMarkMajorChangesLangLinksExemptNamespaces` - array of namespace IDs where pages don't need to have language links for the major change action to be available. In such namespaces, Jira issues will always be created for all languages in `$wgMarkMajorChangesLanguages`, regardless of whether the page has language links.
+4. It is possible to edit `[[MediaWiki:markmajorchanges-field-reason-options]]` to change the list
+   of common reasons.
 
 ## Technical
 ChangeTags and SpecialEditTags aren't modular enough, so I was forced to rip parts of each to use here (such as
 the logging action).
 This extension shows an action form (FormAction) that applies the appropriate tag (majorchange/arabic) and then logs it.
 
-
 ## Changelog
+### 0.7.0 [2025-02-27]
+- Added configuration option `MarkMajorChangesLangLinksExemptNamespaces`: allows specifying namespaces where pages don't need language links for the major change action to be available
+  - In exempt namespaces to always create Jira issues for all allowed languages, regardless of existing language links
+- Fixed language link validation to only consider links in allowed languages
 ### 0.6.0 [2024-12-24]
 - Multilingual support: create a jira issue for each language link in the page
 ### 0.5.1 [2021-10-27]

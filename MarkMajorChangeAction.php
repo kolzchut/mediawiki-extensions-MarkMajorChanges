@@ -10,7 +10,7 @@ use MediaWiki\MediaWikiServices;
  */
 class MajorChangeAction extends FormAction {
 	/** @var array Mapping of Jira custom field names to their IDs */
-	private const FIELD_IDS = [
+	protected const FIELD_IDS = [
 		'LANGUAGE' => 'customfield_10305',
 		'PAGE_TITLE' => 'customfield_10201',
 		'LINK' => 'customfield_11689',
@@ -38,13 +38,15 @@ class MajorChangeAction extends FormAction {
 	 * If a parent ID is provided:
 	 *   - Creates a single subtask under that parent using wiki's content language
 	 * If no parent ID is provided:
-	 *   - Creates standalone major change issues for each language link
+	 *   - For pages in exempt namespaces: Creates standalone major change issues for all configured languages
+	 *   - For other pages: Creates standalone major change issues for each allowed language link
 	 *
 	 * @param string|null $parentIssueId Parent issue ID if creating a subtask
 	 * @return array Array of created issue keys or error messages, keyed by language code
 	 */
-	private function createJiraIssues( ?string $parentIssueId ): array {
+	protected function createJiraIssues( ?string $parentIssueId ): array {
 		$results = [];
+		$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
 
 		if ( $parentIssueId ) {
 			// Create a subtask under the specified parent issue using content language
@@ -52,15 +54,22 @@ class MajorChangeAction extends FormAction {
 			$request = $this->getJiraApiRequestCreateIssue( $parentIssueId, $langCode );
 			$status = $request->execute();
 			$results[$langCode] = $this->handleJiraResponse( $status, $request );
+		} elseif ( $this->isNamespaceExemptFromLangLinks() ) {
+			// For exempt namespaces, always create issues for all allowed languages
+			// regardless of whether the page has language links
+			foreach ( $allowedLanguages as $langCode ) {
+				$request = $this->getJiraApiRequestCreateIssue( null, $langCode );
+				$status = $request->execute();
+				$results[$langCode] = $this->handleJiraResponse( $status, $request );
+			}
 		} else {
-			// Create standalone major change issues for each allowed language
-			$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
-			foreach ( $this->getPageLankLinks() as $langCode => $title ) {
-				if ( in_array( $langCode, $allowedLanguages ) ) {
-					$request = $this->getJiraApiRequestCreateIssue( null, $langCode );
-					$status = $request->execute();
-					$results[$langCode] = $this->handleJiraResponse( $status, $request );
-				}
+			// For non-exempt namespaces, create issues only for existing allowed language links
+			$pageLangLinks = $this->getPageLankLinks();
+
+			foreach ( $pageLangLinks as $langCode => $title ) {
+				$request = $this->getJiraApiRequestCreateIssue( null, $langCode );
+				$status = $request->execute();
+				$results[$langCode] = $this->handleJiraResponse( $status, $request );
 			}
 		}
 
@@ -72,7 +81,7 @@ class MajorChangeAction extends FormAction {
 	 * @param MWHttpRequest $request
 	 * @return array
 	 */
-	private function handleJiraResponse( $status, $request ): array {
+	protected function handleJiraResponse( $status, $request ): array {
 		if ( count( $status->getErrors() ) > 0 ) {
 			return [
 				'status' => 'error',
@@ -131,7 +140,7 @@ class MajorChangeAction extends FormAction {
 		}
 
 		if ( $parentIssueId ) {
-			$fields['parent']['key'] = $parentIssueId;
+			$fields['parent'] = [ 'key' => $parentIssueId ];
 		}
 
 		return [ 'fields' => $fields ];
@@ -219,7 +228,8 @@ class MajorChangeAction extends FormAction {
 	 * @throws ErrorPageError
 	 */
 	public function show() {
-		if ( !$this->hasLangLinks() ) {
+		// Check if language links are required for this namespace
+		if ( !$this->isNamespaceExemptFromLangLinks() && !$this->hasLangLinks() ) {
 			throw new ErrorPageError(
 				'markmajorchanges-not-translated-error', 'markmajorchanges-not-translated-error'
 			);
@@ -295,7 +305,7 @@ class MajorChangeAction extends FormAction {
 	 * @param string|null $langCode Language code for setting the language field
 	 * @return MWHttpRequest|null
 	 */
-	private function getJiraApiRequestCreateIssue(
+	protected function getJiraApiRequestCreateIssue(
 		?string $parentIssueId = null, ?string $langCode = null ): ?MWHttpRequest {
 		return $this->getJiraApiRequest( 'issue', $this->getJiraCreateIssueFields( $parentIssueId, $langCode ) );
 	}
@@ -405,7 +415,7 @@ class MajorChangeAction extends FormAction {
 	/**
 	 * @return bool
 	 */
-	private function hasLangLinks(): bool {
+	protected function hasLangLinks(): bool {
 		return !empty( $this->getPageLankLinks() );
 	}
 
@@ -433,6 +443,19 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/**
+	 * Checks if the current namespace is exempt from language links requirement
+	 *
+	 * @return bool True if the namespace is exempt
+	 */
+	protected function isNamespaceExemptFromLangLinks(): bool {
+		$namespaceId = $this->getTitle()->getNamespace();
+		$exemptNamespaces = MediaWikiServices::getInstance()->getMainConfig()->get(
+			'MarkMajorChangesLangLinksExemptNamespaces' );
+
+		return in_array( $namespaceId, $exemptNamespaces );
+	}
+
+	/**
 	 * Get an array of existing interlanguage links, with the language code in the key and the
 	 * title in the value.
 	 *
@@ -440,10 +463,12 @@ class MajorChangeAction extends FormAction {
 	 *
 	 * @return array
 	 */
-	private function getPageLankLinks(): array {
+	protected function getPageLankLinks(): array {
 		if ( isset( $this->langLinks ) ) {
 			return $this->langLinks;
 		}
+
+		$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
 
 		$dbr = wfGetDB( DB_REPLICA );
 		$res = $dbr->select(
@@ -452,7 +477,9 @@ class MajorChangeAction extends FormAction {
 		);
 		$arr = [];
 		foreach ( $res as $row ) {
-			$arr[$row->ll_lang] = $row->ll_title;
+			if ( in_array( $row->ll_lang, $allowedLanguages ) ) {
+				$arr[$row->ll_lang] = $row->ll_title;
+			}
 		}
 
 		$this->langLinks = $arr;
