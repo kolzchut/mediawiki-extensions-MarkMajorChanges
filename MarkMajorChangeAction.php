@@ -529,9 +529,10 @@ class MajorChangeAction extends FormAction {
 
 		// find the appropriate target page
 		if ( $rev_id ) {
-			$rev = Revision::newFromId( $rev_id );
+			$revisionLookup = MediaWikiServices::getInstance()->getRevisionLookup();
+			$rev = $revisionLookup->getRevisionById( $rev_id );
 			if ( $rev ) {
-				$logEntry->setTarget( $rev->getTitle() );
+				$logEntry->setTarget( $rev->getPageAsLinkTarget() );
 			}
 		}
 
