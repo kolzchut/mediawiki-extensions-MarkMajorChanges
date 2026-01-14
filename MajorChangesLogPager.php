@@ -1,5 +1,7 @@
 <?php
 
+use MediaWiki\MediaWikiServices;
+
 /**
  * @ingroup SpecialPage Pager
  */
@@ -92,7 +94,9 @@ class MajorChangesLogPager extends LogPager {
 		}
 
 		// We might not have a database in the parent yet, so get one
-		$db = $this->getDatabase() ?: wfGetDB( DB_REPLICA );
+		$db = $this->getDatabase() ?: MediaWikiServices::getInstance()
+			->getConnectionProvider()
+			->getReplicaDatabase();
 		$this->mConds[ 'ls_field' ] = 'Tag';
 		$this->mConds[]  = 'ls_value IN (' . $db->makeList( $tagList ) . ')';
 	}
@@ -101,7 +105,9 @@ class MajorChangesLogPager extends LogPager {
 	 * @throws Exception
 	 */
 	protected function limitByDates() {
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()
+			->getConnectionProvider()
+			->getReplicaDatabase();
 		if ( $this->startDate ) {
 			$this->mConds[] = 'log_timestamp >= ' .
 					   $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );

@@ -470,7 +470,9 @@ class MajorChangeAction extends FormAction {
 
 		$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
 
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()
+			->getConnectionProvider()
+			->getReplicaDatabase();
 		$res = $dbr->select(
 			'langlinks', [ 'll_lang', 'll_title' ],
 			[ 'll_from' => $this->getTitle()->getArticleID() ], __METHOD__
@@ -549,7 +551,9 @@ class MajorChangeAction extends FormAction {
 		$logEntry->setParameters( $logParams );
 		$logEntry->setRelations( [ 'Tag' => $tags ] );
 
-		$dbw = wfGetDB( DB_PRIMARY );
+		$dbw = MediaWikiServices::getInstance()
+			->getConnectionProvider()
+			->getPrimaryDatabase();
 		$logId = $logEntry->insert( $dbw );
 
 		// Only send this to UDP, not RC, similar to patrol events
