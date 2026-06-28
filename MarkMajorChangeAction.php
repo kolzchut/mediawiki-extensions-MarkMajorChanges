@@ -113,15 +113,19 @@ class MajorChangeAction extends FormAction {
 			'issuetype' => [
 				'id' => $parentIssueId ? self::ISSUE_TYPE_SUBTASK : self::ISSUE_TYPE_MAJOR_CHANGE
 			],
-			'reporter' => [
-				'id' => $this->lookupCurrentUserJiraAccountId()
-			],
 			self::FIELD_IDS['PAGE_TITLE'] => $this->getTitle()->getFullText(),
 			self::FIELD_IDS['LINK'] => $this->getShortUrl(),
 			self::FIELD_IDS['WIKI_CATEGORIES'] => $this->getPageCategories(),
 			self::FIELD_IDS['ARTICLE_TRANSLATED_TO'] => $this->getTranslationLanguagesForJira(),
 			self::FIELD_IDS['BENEFITS_ENGINE_ID'] => $this->getBenefitsEngineId()
 		];
+
+		// Only set the reporter if the current user maps to a Jira account;
+		// sending a null id would be rejected by Jira.
+		$reporterId = $this->lookupCurrentUserJiraAccountId();
+		if ( $reporterId ) {
+			$fields['reporter'] = [ 'id' => $reporterId ];
+		}
 
 		// Set language field based on language code
 		if ( $langCode ) {
@@ -269,20 +273,20 @@ class MajorChangeAction extends FormAction {
 	public function onSuccess() {
 		$this->saveTags();
 		// @todo notify user according to actual status returned by $this->saveTags()
-		$this->getOutput()->setPageTitle( $this->msg( 'actioncomplete' ) );
+		$this->getOutput()->setPageTitleMsg( $this->msg( 'actioncomplete' ) );
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'tags-edit-success' )->escaped() ) );
 
 		$parentIssueId = $this->getRequest()->getText( 'wpjira_issue_id' );
 		$results = $this->createJiraIssues( $parentIssueId );
 
-		// Show error messages for any failed issues
+		// Show error messages for any failed issues. The change tag was saved,
+		// but a Jira issue could not be created — surface that as an error box
+		// rather than plain text so the editor is not misled by the success page.
 		foreach ( $results as $langCode => $result ) {
 			if ( $result['status'] === 'error' ) {
-				$this->getOutput()->addWikiMsg(
-					'markmajorchanges-jira-error',
-					$result['message'],
-					$langCode
-				);
+				$this->getOutput()->addHTML( Html::errorBox(
+					$this->msg( 'markmajorchanges-jira-error', $result['message'], $langCode )->parse()
+				) );
 			}
 		}
 
@@ -406,7 +410,9 @@ class MajorChangeAction extends FormAction {
 			$request = $this->getJiraApiRequest( 'user/search?query=' . $email );
 			$request->execute();
 			$content = $this->getResponseContent( $request );
-			$accountId = $content[0]->accountId;
+			if ( is_array( $content ) && isset( $content[0]->accountId ) ) {
+				$accountId = $content[0]->accountId;
+			}
 		}
 
 		return $accountId;
@@ -596,8 +602,10 @@ class MajorChangeAction extends FormAction {
 	}
 
 	/** @inheritDoc */
-	protected function getPageTitle(): string {
-		return $this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() )->text();
+	protected function getPageTitle() {
+		// Return a Message, not a string: a string return from
+		// Action::getPageTitle() is deprecated since MediaWiki 1.41.
+		return $this->msg( 'markmajorchange-action-title' )->params( parent::getPageTitle() );
 	}
 
 	/** @inheritDoc */
