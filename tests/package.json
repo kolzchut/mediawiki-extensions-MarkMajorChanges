@@ -1,0 +1,18 @@
+{
+  "name": "markmajorchanges-extension-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright e2e suite for the MarkMajorChanges extension (toolbar action + log special page).",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}
