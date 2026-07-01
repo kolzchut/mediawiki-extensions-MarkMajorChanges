@@ -35,6 +35,15 @@ MW_USERNAME=Dockerstaff MW_PASSWORD=<vault-password> \
   npx playwright test
 ```
 
+## Authentication
+
+The staff-only checks log in through the MediaWiki **API** (`action=clientlogin`),
+not the `Special:UserLogin` form. This is deliberate: on staging the login form
+embeds reCAPTCHA, which a headless browser can't solve. The API login is
+captcha-exempt for a privileged test user and sets the same session cookie —
+which Playwright shares between its API and browser contexts — so the suite runs
+against staging as well as local dev. See `pages/mwAuth.ts`.
+
 ## Environment variables
 
 | Variable          | Default                 | Purpose                                     |

@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { mwApiLogin } from './mwAuth';
 
 /**
  * Page object for the MarkMajorChanges toolbar action and its log special page.
@@ -19,13 +20,14 @@ export class MarkMajorChangesPage {
     this.articlePath = process.env.MW_ARTICLE_PATH || `${this.scriptPath}/`;
   }
 
-  /** Form-based login via Special:UserLogin. */
+  /**
+   * Log in via the MediaWiki API (`clientlogin`), not the Special:UserLogin
+   * form — the form embeds reCAPTCHA on staging, which a headless browser can't
+   * solve. The API sets the session cookie in Playwright's shared jar, so the
+   * subsequent page navigations run authenticated. See {@link mwApiLogin}.
+   */
   async login(username: string, password: string): Promise<void> {
-    await this.page.goto(`${this.scriptPath}/Special:UserLogin`);
-    await this.page.getByRole('textbox').first().fill(username);
-    await this.page.locator('input[type="password"]').fill(password);
-    await this.page.locator('button[type="submit"], #wpLoginAttempt').first().click();
-    await this.page.waitForLoadState('domcontentloaded');
+    await mwApiLogin(this.page, username, password);
   }
 
   async gotoArticle(): Promise<void> {
