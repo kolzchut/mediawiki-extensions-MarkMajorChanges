@@ -1,5 +1,17 @@
 <?php
 
+namespace MediaWiki\Extension\MarkMajorChanges;
+
+use ChangeTags;
+use LogEventsList;
+use MediaWiki\Html\FormOptions;
+use MediaWiki\Html\Html;
+use MediaWiki\Html\ListToggle;
+use MediaWiki\HTMLForm\HTMLForm;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Xml\Xml;
+use Wikimedia\Rdbms\IConnectionProvider;
+
 class SpecialMajorChangesLog extends SpecialPage {
 	/** @var string[] */
 	protected array $mAllowedModes = [
@@ -14,9 +26,14 @@ class SpecialMajorChangesLog extends SpecialPage {
 		'queue'
 	];
 
-	/** @inheritDoc */
-	public function __construct() {
+	private IConnectionProvider $connectionProvider;
+
+	/**
+	 * @param IConnectionProvider $connectionProvider
+	 */
+	public function __construct( IConnectionProvider $connectionProvider ) {
 		parent::__construct( 'MajorChangesLog', 'majorchanges-log' );
+		$this->connectionProvider = $connectionProvider;
 	}
 
 	/** @inheritDoc */
@@ -90,7 +107,6 @@ class SpecialMajorChangesLog extends SpecialPage {
 
 	/**
 	 * @return void
-	 * @throws MWException
 	 */
 	protected function searchForm() {
 		$formDescriptor = [
@@ -184,7 +200,7 @@ class SpecialMajorChangesLog extends SpecialPage {
 		);
 
 		$pager = new MajorChangesLogPager(
-			$loglist, $opts
+			$this->connectionProvider, $loglist, $opts
 		);
 		$pager->doQuery();
 		$logBody = $pager->getBody();

@@ -16,6 +16,11 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+namespace MediaWiki\Extension\MarkMajorChanges;
+
+use MediaWiki\MediaWikiServices;
+use TagLogFormatter;
+
 /**
  * This class formats tag log entries.
  * It is an extension of the default TagLogFormatter,
@@ -30,8 +35,9 @@
  * 8:list:tagsRemoved
  * 9:number:tagsRemovedCount
  *
+ * LogFormatter subclasses are built with only a LogEntry (no service
+ * injection), so the LinkRenderer is fetched from the service container.
  */
-
 class MajorChangesTagLogFormatter extends TagLogFormatter {
 	/**
 	 * prevent user tool links after the username.
@@ -56,7 +62,7 @@ class MajorChangesTagLogFormatter extends TagLogFormatter {
 		$params = $this->getMessageParameters();
 		if ( isset( $params[3] ) ) {
 			$oldid = $params[3];
-			$linkRenderer = MediaWiki\MediaWikiServices::getInstance()->getLinkRenderer();
+			$linkRenderer = MediaWikiServices::getInstance()->getLinkRenderer();
 			$diffLink = $linkRenderer->makeKnownLink(
 				$this->entry->getTarget(),
 				$this->msg( 'diff' )->escaped(),

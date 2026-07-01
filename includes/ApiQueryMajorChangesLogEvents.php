@@ -6,11 +6,55 @@
  * @ingroup API
  */
 
+namespace MediaWiki\Extension\MarkMajorChanges;
+
+use LogFormatterFactory;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiQuery;
+use MediaWiki\Api\ApiQueryLogEvents;
+use MediaWiki\CommentFormatter\RowCommentFormatter;
+use MediaWiki\CommentStore\CommentStore;
+use MediaWiki\Storage\NameTableStore;
+use MediaWiki\Title\TitleFactory;
+use MediaWiki\User\UserNameUtils;
+
 class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 
-	/** @inheritDoc */
-	public function __construct( ApiQuery $query, $moduleName ) {
-		parent::__construct( $query, $moduleName );
+	private TitleFactory $titleFactory;
+
+	/**
+	 * The service arguments mirror ApiQueryLogEvents so we can forward them to
+	 * the parent constructor; TitleFactory is our own addition.
+	 *
+	 * @param ApiQuery $query
+	 * @param string $moduleName
+	 * @param CommentStore $commentStore
+	 * @param RowCommentFormatter $commentFormatter
+	 * @param NameTableStore $changeTagDefStore
+	 * @param UserNameUtils $userNameUtils
+	 * @param LogFormatterFactory $logFormatterFactory
+	 * @param TitleFactory $titleFactory
+	 */
+	public function __construct(
+		ApiQuery $query,
+		string $moduleName,
+		CommentStore $commentStore,
+		RowCommentFormatter $commentFormatter,
+		NameTableStore $changeTagDefStore,
+		UserNameUtils $userNameUtils,
+		LogFormatterFactory $logFormatterFactory,
+		TitleFactory $titleFactory
+	) {
+		parent::__construct(
+			$query,
+			$moduleName,
+			$commentStore,
+			$commentFormatter,
+			$changeTagDefStore,
+			$userNameUtils,
+			$logFormatterFactory
+		);
+		$this->titleFactory = $titleFactory;
 	}
 
 	/** @inheritDoc */
@@ -35,7 +79,7 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 		foreach ( $rows as &$row ) {
 			if ( is_array( $row ) ) {
 				if ( isset( $row[ 'pageid' ] ) && !empty( $row[ 'pageid' ] ) && isset( $prop[ 'url' ] ) ) {
-					$title = Title::newFromID( $row[ 'pageid' ] );
+					$title = $this->titleFactory->newFromID( $row[ 'pageid' ] );
 					$row[ 'url' ] = $title ? $title->getFullURL() : '';
 				}
 				unset( $row[ 'type' ], $row[ 'action' ] );
@@ -45,17 +89,17 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 	}
 
 	/**
-	 * @param string $category
+	 * @param string|null $category
 	 *
 	 * @return void
-	 * @throws ApiUsageException
+	 * @throws \MediaWiki\Api\ApiUsageException
 	 */
-	protected function limitToCategory( string $category ) {
+	protected function limitToCategory( ?string $category ) {
 		if ( !$category ) {
 			return;
 		}
 
-		$categoryTitle = Title::makeTitleSafe( NS_CATEGORY, $category );
+		$categoryTitle = $this->titleFactory->makeTitleSafe( NS_CATEGORY, $category );
 		if ( !$categoryTitle ) {
 			$this->dieWithError( 'apierror-invalidcategory' );
 		}
@@ -71,11 +115,11 @@ class ApiQueryMajorChangesLogEvents extends ApiQueryLogEvents {
 	}
 
 	/**
-	 * @param string $mode
+	 * @param string|null $mode
 	 *
 	 * @return void
 	 */
-	protected function limitToRelevantTags( string $mode ) {
+	protected function limitToRelevantTags( ?string $mode ) {
 		$mainTag   = MarkMajorChanges::getMainTagName();
 		$secondTag = MarkMajorChanges::getSecondaryTagName();
 		$db = $this->getDB();
