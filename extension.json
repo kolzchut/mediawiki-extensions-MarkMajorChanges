@@ -35,7 +35,7 @@
 		"MarkMajorChangesLangLinksExemptNamespaces": []
 	},
 	"Hooks": {
-		"SkinTemplateNavigation": [
+		"SkinTemplateNavigation::Universal": [
 			"MarkMajorChangesHooks::onSkinTemplateNavigation"
 		],
 		"ListDefinedTags": [
