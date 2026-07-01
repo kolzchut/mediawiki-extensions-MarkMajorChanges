@@ -34,6 +34,18 @@ the logging action).
 This extension shows an action form (FormAction) that applies the appropriate tag (majorchange/arabic) and then logs it.
 
 ## Changelog
+### 0.8.0 [2026-07-01]
+- Modernized for MediaWiki 1.43: instance-based hook handlers with service
+  injection, `AutoloadNamespaces`, namespaced classes under
+  `MediaWiki\Extension\MarkMajorChanges\`, and PHP files moved to `includes/`.
+- Registered the toolbar action on the surviving `SkinTemplateNavigation::Universal`
+  hook (the legacy `SkinTemplateNavigation` hook is no longer fired by core, which
+  had silently removed the button).
+- Fixed the `majorchangeslogevents` API module, which no longer instantiated under
+  1.43 (its constructor did not forward the services required by the parent), and
+  made its `mode`/`category` parameters tolerate being omitted.
+- Converted client scripts from jQuery to vanilla JS; `modules/` renamed to
+  `resources/`; added eslint/stylelint config and refreshed dev dependencies.
 ### 0.7.0 [2025-02-27]
 - Added configuration option `MarkMajorChangesLangLinksExemptNamespaces`: allows specifying namespaces where pages don't need language links for the major change action to be available
   - In exempt namespaces to always create Jira issues for all allowed languages, regardless of existing language links

@@ -1,6 +1,12 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
+namespace MediaWiki\Extension\MarkMajorChanges;
+
+use DateTime;
+use LogEventsList;
+use MediaWiki\Html\FormOptions;
+use MediaWiki\Pager\LogPager;
+use Wikimedia\Rdbms\IConnectionProvider;
 
 /**
  * @ingroup SpecialPage Pager
@@ -17,14 +23,23 @@ class MajorChangesLogPager extends LogPager {
 	/** @var array */
 	protected array $mConds;
 
+	private IConnectionProvider $connectionProvider;
+
 	/**
+	 * @param IConnectionProvider $connectionProvider
 	 * @param LogEventsList $logEventsList
 	 * @param FormOptions $opts
 	 */
-	public function __construct( LogEventsList $logEventsList, FormOptions $opts ) {
+	public function __construct(
+		IConnectionProvider $connectionProvider,
+		LogEventsList $logEventsList,
+		FormOptions $opts
+	) {
+		$this->connectionProvider = $connectionProvider;
+
 		// Override TagLogFormatter. We don't want to override it system-wide, just here
 		global $wgLogActionsHandlers;
-		$wgLogActionsHandlers['tag/update'] = 'MajorChangesTagLogFormatter';
+		$wgLogActionsHandlers['tag/update'] = MajorChangesTagLogFormatter::class;
 
 		$this->status    = $opts->getValue( 'status' );
 		$this->startDate = $opts->getValue( 'start' );
@@ -93,30 +108,25 @@ class MajorChangesLogPager extends LogPager {
 				$tagList = [ $mainTag, $secondTag ];
 		}
 
-		// We might not have a database in the parent yet, so get one
-		$db = $this->getDatabase() ?: MediaWikiServices::getInstance()
-			->getConnectionProvider()
-			->getReplicaDatabase();
+		$db = $this->connectionProvider->getReplicaDatabase();
 		$this->mConds[ 'ls_field' ] = 'Tag';
 		$this->mConds[]  = 'ls_value IN (' . $db->makeList( $tagList ) . ')';
 	}
 
 	/**
-	 * @throws Exception
+	 * @throws \Exception
 	 */
 	protected function limitByDates() {
-		$dbr = MediaWikiServices::getInstance()
-			->getConnectionProvider()
-			->getReplicaDatabase();
+		$dbr = $this->connectionProvider->getReplicaDatabase();
 		if ( $this->startDate ) {
 			$this->mConds[] = 'log_timestamp >= ' .
-					   $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );
+				$dbr->addQuotes( $dbr->timestamp( new DateTime( $this->startDate ) ) );
 		}
 
 		if ( $this->endDate ) {
 			// Add 1 day, so we check for "any date before tomorrow"
 			$this->mConds[] = 'log_timestamp < ' .
-					   $dbr->addQuotes( $dbr->timestamp( new DateTime( $this->endDate . ' +1 day' ) ) );
+				$dbr->addQuotes( $dbr->timestamp( new DateTime( $this->endDate . ' +1 day' ) ) );
 		}
 	}
 

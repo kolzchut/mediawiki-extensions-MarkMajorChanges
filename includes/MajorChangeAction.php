@@ -1,6 +1,30 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
+namespace MediaWiki\Extension\MarkMajorChanges;
+
+use Article;
+use CargoSQLQuery;
+use ChangeTags;
+use ErrorPageError;
+use FormAction;
+use ManualLogEntry;
+use MediaWiki\Config\Config;
+use MediaWiki\Context\IContextSource;
+use MediaWiki\Html\Html;
+use MediaWiki\Http\HttpRequestFactory;
+use MediaWiki\Language\Language;
+use MediaWiki\Languages\LanguageNameUtils;
+use MediaWiki\Permissions\PermissionManager;
+use MediaWiki\Registration\ExtensionRegistry;
+use MediaWiki\Revision\RevisionLookup;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Status\Status;
+use MediaWiki\User\User;
+use MWException;
+use MWExceptionHandler;
+use MWHttpRequest;
+use PermissionsError;
+use Wikimedia\Rdbms\IConnectionProvider;
 
 /**
  * Class MajorChangeAction
@@ -32,6 +56,46 @@ class MajorChangeAction extends FormAction {
 	/** @var array|null */
 	private ?array $langLinks;
 
+	private Config $config;
+	private Language $contentLanguage;
+	private LanguageNameUtils $languageNameUtils;
+	private PermissionManager $permissionManager;
+	private HttpRequestFactory $httpRequestFactory;
+	private IConnectionProvider $connectionProvider;
+	private RevisionLookup $revisionLookup;
+
+	/**
+	 * @param Article $article
+	 * @param IContextSource $context
+	 * @param Config $config
+	 * @param Language $contentLanguage
+	 * @param LanguageNameUtils $languageNameUtils
+	 * @param PermissionManager $permissionManager
+	 * @param HttpRequestFactory $httpRequestFactory
+	 * @param IConnectionProvider $connectionProvider
+	 * @param RevisionLookup $revisionLookup
+	 */
+	public function __construct(
+		Article $article,
+		IContextSource $context,
+		Config $config,
+		Language $contentLanguage,
+		LanguageNameUtils $languageNameUtils,
+		PermissionManager $permissionManager,
+		HttpRequestFactory $httpRequestFactory,
+		IConnectionProvider $connectionProvider,
+		RevisionLookup $revisionLookup
+	) {
+		parent::__construct( $article, $context );
+		$this->config = $config;
+		$this->contentLanguage = $contentLanguage;
+		$this->languageNameUtils = $languageNameUtils;
+		$this->permissionManager = $permissionManager;
+		$this->httpRequestFactory = $httpRequestFactory;
+		$this->connectionProvider = $connectionProvider;
+		$this->revisionLookup = $revisionLookup;
+	}
+
 	/**
 	 * Creates Jira issue(s) based on whether a parent issue ID is provided
 	 *
@@ -46,11 +110,11 @@ class MajorChangeAction extends FormAction {
 	 */
 	protected function createJiraIssues( ?string $parentIssueId ): array {
 		$results = [];
-		$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
+		$allowedLanguages = $this->config->get( 'MarkMajorChangesLanguages' );
 
 		if ( $parentIssueId ) {
 			// Create a subtask under the specified parent issue using content language
-			$langCode = MediaWikiServices::getInstance()->getContentLanguage()->getCode();
+			$langCode = $this->contentLanguage->getCode();
 			$request = $this->getJiraApiRequestCreateIssue( $parentIssueId, $langCode );
 			$status = $request->execute();
 			$results[$langCode] = $this->handleJiraResponse( $status, $request );
@@ -102,7 +166,7 @@ class MajorChangeAction extends FormAction {
 	 * @return array Jira issue fields
 	 */
 	private function getJiraCreateIssueFields( ?string $parentIssueId = null, ?string $langCode = null ): array {
-		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+		$jiraConf = $this->config->get( 'MarkMajorChangesJiraConf' );
 
 		$fields = [
 			'project' => [
@@ -129,8 +193,7 @@ class MajorChangeAction extends FormAction {
 
 		// Set language field based on language code
 		if ( $langCode ) {
-			$languageNameUtils = MediaWikiServices::getInstance()->getLanguageNameUtils();
-			$languageName = $languageNameUtils->getLanguageName( $langCode, 'en' );
+			$languageName = $this->languageNameUtils->getLanguageName( $langCode, 'en' );
 			if ( $languageName ) {
 				$fields[self::FIELD_IDS['LANGUAGE']] = [ 'value' => $languageName ];
 			}
@@ -253,12 +316,11 @@ class MajorChangeAction extends FormAction {
 	 *
 	 * @return void
 	 * @throws PermissionsError
-	 * @throws ReadOnlyError
-	 * @throws UserBlockedError
+	 * @throws \ReadOnlyError
+	 * @throws \UserBlockedError
 	 */
 	protected function checkCanExecute( User $user ) {
-		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
-		$errors = $permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
+		$errors = $this->permissionManager->getPermissionErrors( 'changetags', $this->getUser(), $this->getTitle() );
 		if ( count( $errors ) ) {
 			throw new PermissionsError( 'changetags', $errors );
 		}
@@ -360,10 +422,9 @@ class MajorChangeAction extends FormAction {
 	 */
 	private function getJiraApiRequest( string $urlPath, array $postData = [] ): ?MWHttpRequest {
 		$request = null;
-		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+		$jiraConf = $this->config->get( 'MarkMajorChangesJiraConf' );
 		if ( isset( $jiraConf['password'] ) ) {
-			$requestFactory = MediaWikiServices::getInstance()->getHttpRequestFactory();
-			$request = $requestFactory->create( $jiraConf['url'] . '/rest/api/2/' . $urlPath, [
+			$request = $this->httpRequestFactory->create( $jiraConf['url'] . '/rest/api/2/' . $urlPath, [
 				'method' => empty( $postData ) ? 'GET' : 'POST',
 				'username' => $jiraConf['username'],
 				'password' => $jiraConf['password'],
@@ -394,10 +455,7 @@ class MajorChangeAction extends FormAction {
 	 * @return string
 	 */
 	private function getCurrentContentLanguageName(): string {
-		$languageNameUtils = MediaWikiServices::getInstance()->getLanguageNameUtils();
-		$contentLanguage = MediaWikiServices::getInstance()->getContentLanguage();
-
-		return $languageNameUtils->getLanguageName( $contentLanguage->getCode(), 'en' );
+		return $this->languageNameUtils->getLanguageName( $this->contentLanguage->getCode(), 'en' );
 	}
 
 	/**
@@ -429,7 +487,7 @@ class MajorChangeAction extends FormAction {
 	 * @return string a short URL for Jira's tiny URL field
 	 */
 	private function getShortUrl(): ?string {
-		$jiraConf = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesJiraConf' );
+		$jiraConf = $this->config->get( 'MarkMajorChangesJiraConf' );
 		$shortlinkFormat = $jiraConf['shortlinkFormat'];
 		$articleId = $this->getTitle()->getArticleID();
 		$lang = $this->getLanguage()->getHtmlCode();
@@ -455,8 +513,7 @@ class MajorChangeAction extends FormAction {
 	 */
 	protected function isNamespaceExemptFromLangLinks(): bool {
 		$namespaceId = $this->getTitle()->getNamespace();
-		$exemptNamespaces = MediaWikiServices::getInstance()->getMainConfig()->get(
-			'MarkMajorChangesLangLinksExemptNamespaces' );
+		$exemptNamespaces = $this->config->get( 'MarkMajorChangesLangLinksExemptNamespaces' );
 
 		return in_array( $namespaceId, $exemptNamespaces );
 	}
@@ -474,11 +531,9 @@ class MajorChangeAction extends FormAction {
 			return $this->langLinks;
 		}
 
-		$allowedLanguages = MediaWikiServices::getInstance()->getMainConfig()->get( 'MarkMajorChangesLanguages' );
+		$allowedLanguages = $this->config->get( 'MarkMajorChangesLanguages' );
 
-		$dbr = MediaWikiServices::getInstance()
-			->getConnectionProvider()
-			->getReplicaDatabase();
+		$dbr = $this->connectionProvider->getReplicaDatabase();
 		$res = $dbr->select(
 			'langlinks', [ 'll_lang', 'll_title' ],
 			[ 'll_from' => $this->getTitle()->getArticleID() ], __METHOD__
@@ -513,7 +568,7 @@ class MajorChangeAction extends FormAction {
 			$result = $cargoQuery->run();
 			return empty( $result ) ? null : $result[0]['id'];
 		} catch ( MWException $e ) {
-			\MWExceptionHandler::logException( $e );
+			MWExceptionHandler::logException( $e );
 			return null;
 		}
 	}
@@ -537,8 +592,7 @@ class MajorChangeAction extends FormAction {
 
 		// find the appropriate target page
 		if ( $rev_id ) {
-			$revisionLookup = MediaWikiServices::getInstance()->getRevisionLookup();
-			$rev = $revisionLookup->getRevisionById( $rev_id );
+			$rev = $this->revisionLookup->getRevisionById( $rev_id );
 			if ( $rev ) {
 				$logEntry->setTarget( $rev->getPageAsLinkTarget() );
 			}
@@ -557,9 +611,7 @@ class MajorChangeAction extends FormAction {
 		$logEntry->setParameters( $logParams );
 		$logEntry->setRelations( [ 'Tag' => $tags ] );
 
-		$dbw = MediaWikiServices::getInstance()
-			->getConnectionProvider()
-			->getPrimaryDatabase();
+		$dbw = $this->connectionProvider->getPrimaryDatabase();
 		$logId = $logEntry->insert( $dbw );
 
 		// Only send this to UDP, not RC, similar to patrol events
