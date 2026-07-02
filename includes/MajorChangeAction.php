@@ -603,10 +603,17 @@ class MajorChangeAction extends FormAction {
 			$logEntry->setTarget( SpecialPage::getTitleFor( 'Tags' ) );
 		}
 
+		// Write the full tag/update parameter set (including the empty
+		// "removed" pair) so the entries stay well-formed for core
+		// TagLogFormatter, which reads 9:number:tagsRemovedCount. Omitting
+		// them triggers an "undefined array key" warning wherever core
+		// formats the entry (e.g. Special:Log). See #7.
 		$logParams = [
 			'4::revid' => $rev_id,
 			'6:list:tagsAdded' => $tags,
 			'7:number:tagsAddedCount' => count( $tags ),
+			'8:list:tagsRemoved' => [],
+			'9:number:tagsRemovedCount' => 0,
 		];
 		$logEntry->setParameters( $logParams );
 		$logEntry->setRelations( [ 'Tag' => $tags ] );

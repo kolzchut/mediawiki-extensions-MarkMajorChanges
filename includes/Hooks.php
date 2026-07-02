@@ -22,6 +22,22 @@ class Hooks implements
 	}
 
 	/**
+	 * Extension registration callback.
+	 *
+	 * Override the core formatter for `tag/update` log entries with our own.
+	 * This must happen at load time (during Setup), not at request time: in
+	 * MW 1.43 LogFormatterFactory reads $wgLogActionsHandlers once into a
+	 * ServiceOptions snapshot when the service is first built, so a runtime
+	 * mutation no longer takes effect. It also cannot be done via
+	 * extension.json "LogActionsHandlers", because that merge gives an existing
+	 * core key precedence over the extension's value. See #7.
+	 */
+	public static function onRegistration(): void {
+		global $wgLogActionsHandlers;
+		$wgLogActionsHandlers['tag/update'] = MajorChangesTagLogFormatter::class;
+	}
+
+	/**
 	 * Add our change tags to the list of defined tags.
 	 *
 	 * @param string[] &$tags

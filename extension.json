@@ -49,6 +49,7 @@
 			"value": []
 		}
 	},
+	"callback": "MediaWiki\\Extension\\MarkMajorChanges\\Hooks::onRegistration",
 	"HookHandlers": {
 		"main": {
 			"class": "MediaWiki\\Extension\\MarkMajorChanges\\Hooks",
