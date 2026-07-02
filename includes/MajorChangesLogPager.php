@@ -37,9 +37,10 @@ class MajorChangesLogPager extends LogPager {
 	) {
 		$this->connectionProvider = $connectionProvider;
 
-		// Override TagLogFormatter. We don't want to override it system-wide, just here
-		global $wgLogActionsHandlers;
-		$wgLogActionsHandlers['tag/update'] = MajorChangesTagLogFormatter::class;
+		// The formatter for tag/update is registered at load time in
+		// Hooks::onRegistration. Runtime $wgLogActionsHandlers mutation (the
+		// previous approach here) no longer takes effect in MW 1.43 —
+		// LogFormatterFactory snapshots the config. See #7.
 
 		$this->status    = $opts->getValue( 'status' );
 		$this->startDate = $opts->getValue( 'start' );
