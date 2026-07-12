@@ -67,6 +67,11 @@ class Hooks implements
 	 * Add the "mark major change" action to the page toolbar for users who may
 	 * apply the change tag.
 	 *
+	 * The action tags an existing revision (and reads its langlinks, categories,
+	 * etc.), so it only makes sense on a real content page. Skip it on titles
+	 * that cannot hold content — Special:/Media: pages, where canExist() is
+	 * false — and on pages that do not yet exist, which have no revision to tag.
+	 *
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/SkinTemplateNavigation::Universal
 	 *
 	 * @param \SkinTemplate $sktemplate The skin template on which the UI is built.
@@ -75,6 +80,10 @@ class Hooks implements
 	public function onSkinTemplateNavigation__Universal( $sktemplate, &$links ): void {
 		$title = $sktemplate->getRelevantTitle();
 		$user = $sktemplate->getUser();
+
+		if ( !$title->canExist() || !$title->exists() ) {
+			return;
+		}
 
 		if ( $this->permissionManager->userHasAllRights( $user, 'changetags', 'markmajorchange' ) ) {
 			$links['actions']['markmajorchange'] = [
